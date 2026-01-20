@@ -6,7 +6,6 @@ import {
   CardBody,
   Spinner,
   Label,
-  Alert,
   Tooltip,
   Checkbox,
   Button,
@@ -772,6 +771,48 @@ const getSchedulingFailureReason = (pod: PodType): string | null => {
   return null;
 };
 
+// Unschedulable Pod Box Component - small box representing an unschedulable pod
+const UnschedulablePodBox: React.FC<{ pod: PodType; width: number }> = ({ pod, width }) => {
+  const effectiveCPU = calculatePodEffectiveCPU(pod);
+  const effectiveMemory = calculatePodEffectiveMemory(pod);
+  const memoryFormatted = formatMemory(effectiveMemory);
+  const reason = getSchedulingFailureReason(pod) || 'No reason available';
+
+  const podTooltip = (
+    <div style={{ whiteSpace: 'pre-line', fontSize: '0.875rem' }}>
+      <strong>Name:</strong> {pod.metadata.name}
+      <br />
+      <strong>Namespace:</strong> {pod.metadata.namespace}
+      <br />
+      <strong>Phase:</strong> {pod.status.phase}
+      <br />
+      <strong>Reason:</strong> {reason}
+      <br />
+      <strong>Effective CPU:</strong> {effectiveCPU.toFixed(2)} cores
+      <br />
+      <strong>Effective Memory:</strong> {memoryFormatted.value} {memoryFormatted.unit}
+    </div>
+  );
+
+  return (
+    <Tooltip content={podTooltip}>
+      <div
+        style={{
+          width: `${width}px`,
+          minWidth: '24px',
+          height: '24px',
+          backgroundColor: '#8A8D90',
+          borderRadius: '4px',
+          border: '2px dashed #6A6E73',
+          cursor: 'help',
+          flexShrink: 0
+        }}
+        title={`${pod.metadata.namespace}/${pod.metadata.name}`}
+      />
+    </Tooltip>
+  );
+};
+
 // Scheduling Pressure Component
 const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
   const unscheduledPods = useMemo(() => {
@@ -781,14 +822,6 @@ const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
       !pod.spec.nodeName
     );
   }, [pods]);
-
-  const podsWithReasons = useMemo(() => {
-    return unscheduledPods.map(pod => ({
-      name: pod.metadata.name,
-      namespace: pod.metadata.namespace,
-      reason: getSchedulingFailureReason(pod) || 'No reason available'
-    }));
-  }, [unscheduledPods]);
 
   if (unscheduledPods.length === 0) {
     return (
@@ -805,6 +838,36 @@ const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
     );
   }
 
+  // Calculate effective CPU and memory for each pod
+  const podsWithResources = unscheduledPods.map(pod => ({
+    pod,
+    effectiveCPU: calculatePodEffectiveCPU(pod),
+    effectiveMemory: calculatePodEffectiveMemory(pod)
+  }));
+
+  // Find max values to normalize
+  const maxEffectiveCPU = Math.max(...podsWithResources.map(p => p.effectiveCPU), 1);
+  const maxEffectiveMemory = Math.max(...podsWithResources.map(p => p.effectiveMemory), 1);
+
+  // Calculate combined resource score (normalized average of CPU and memory)
+  const podsWithScore = podsWithResources.map(({ pod, effectiveCPU, effectiveMemory }) => {
+    // Normalize both to 0-1 range
+    const normalizedCPU = maxEffectiveCPU > 0 ? effectiveCPU / maxEffectiveCPU : 0;
+    const normalizedMemory = maxEffectiveMemory > 0 ? effectiveMemory / maxEffectiveMemory : 0;
+    
+    // Combined score (average of normalized CPU and memory)
+    const combinedScore = (normalizedCPU + normalizedMemory) / 2;
+    
+    return { pod, effectiveCPU, effectiveMemory, combinedScore };
+  });
+
+  // Sort by combined score (descending)
+  podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
+  
+  // Base width and max width for pod boxes
+  const minWidth = 24;
+  const maxWidth = 120;
+
   return (
     <Card style={{ marginBottom: '1rem' }}>
       <CardTitle style={{ padding: '1rem', borderBottom: '1px solid #D1D1D1' }}>
@@ -813,19 +876,19 @@ const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
         </div>
       </CardTitle>
       <CardBody style={{ padding: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {podsWithReasons.map((pod, index) => (
-            <Alert
-              key={`${pod.namespace}-${pod.name}-${index}`}
-              variant="warning"
-              title={`${pod.namespace}/${pod.name}`}
-              style={{ marginBottom: 0 }}
-            >
-              <div style={{ fontSize: '0.875rem' }}>
-                <strong>Reason:</strong> {pod.reason}
-              </div>
-            </Alert>
-          ))}
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.25rem'
+        }}>
+          {podsWithScore.map(({ pod, combinedScore }) => {
+            // Calculate width proportionally based on combined score (min 24px, max 120px)
+            const width = minWidth + combinedScore * (maxWidth - minWidth);
+
+            return (
+              <UnschedulablePodBox key={pod.metadata.uid} pod={pod} width={width} />
+            );
+          })}
         </div>
       </CardBody>
     </Card>
