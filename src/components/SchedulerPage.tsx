@@ -10,6 +10,7 @@ import {
   Tooltip,
   Checkbox,
   Button,
+  SearchInput,
 } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 
@@ -69,6 +70,14 @@ interface PodType {
     conditions?: PodCondition[];
   };
 }
+
+interface NamespaceType {
+  metadata: {
+    name: string;
+    uid: string;
+  };
+}
+
 
 // Parse CPU quantity to cores (as a number)
 const parseCPUQuantity = (quantity: string): number => {
@@ -1025,6 +1034,270 @@ const ResourceSelector: React.FC<{
   );
 };
 
+// Project Selector Component - Dropdown Multiselect for namespaces
+const ProjectSelector: React.FC<{
+  availableNamespaces: string[];
+  selectedNamespaces: Set<string>;
+  onNamespaceToggle: (namespace: string) => void;
+  onSelectAll: () => void;
+  onClearAll: () => void;
+}> = ({ availableNamespaces, selectedNamespaces, onNamespaceToggle, onSelectAll, onClearAll }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Filter namespaces based on search
+  const filteredNamespaces = useMemo(() => {
+    if (!searchValue) return availableNamespaces;
+    const lowerSearch = searchValue.toLowerCase();
+    return availableNamespaces.filter(ns => ns.toLowerCase().includes(lowerSearch));
+  }, [availableNamespaces, searchValue]);
+
+  // Calculate dropdown position and width when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: Math.max(rect.width, 300)
+      });
+    }
+  }, [isOpen]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        buttonRef.current && 
+        buttonRef.current.contains(event.target as Node)
+      ) {
+        return;
+      }
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchValue('');
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedCount = selectedNamespaces.size;
+  const allSelected = selectedCount === availableNamespaces.length && availableNamespaces.length > 0;
+  const buttonText = selectedCount === 0 
+    ? 'All Projects' 
+    : allSelected 
+      ? 'All Projects'
+      : `Projects (${selectedCount})`;
+
+  return (
+    <>
+      <div style={{ display: 'inline-block' }}>
+        <Button
+          ref={buttonRef}
+          variant="control"
+          onClick={() => setIsOpen(!isOpen)}
+          style={{
+            minWidth: '200px',
+            textAlign: 'left',
+            justifyContent: 'space-between'
+          }}
+        >
+          <span>{buttonText}</span>
+          <span style={{ marginLeft: '0.5rem' }}>{isOpen ? '▲' : '▼'}</span>
+        </Button>
+      </div>
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          className="project-dropdown"
+          style={{
+            position: 'fixed',
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`,
+            maxHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+            zIndex: 9999,
+            padding: 0,
+            border: 'none',
+            backgroundColor: '#3d3d3d'
+          }}
+        >
+          <style>{`
+            .project-dropdown::-webkit-scrollbar {
+              width: 12px;
+            }
+            .project-dropdown::-webkit-scrollbar-track {
+              background: #3d3d3d;
+            }
+            .project-dropdown::-webkit-scrollbar-thumb {
+              background: #5a5a5a;
+              border-radius: 6px;
+            }
+            .project-dropdown::-webkit-scrollbar-thumb:hover {
+              background: #6a6a6a;
+            }
+            .project-dropdown-list::-webkit-scrollbar {
+              width: 12px;
+            }
+            .project-dropdown-list::-webkit-scrollbar-track {
+              background: #3d3d3d;
+            }
+            .project-dropdown-list::-webkit-scrollbar-thumb {
+              background: #5a5a5a;
+              border-radius: 6px;
+            }
+            .project-dropdown-list::-webkit-scrollbar-thumb:hover {
+              background: #6a6a6a;
+            }
+          `}</style>
+          {/* Search input */}
+          <div style={{ 
+            padding: '0.5rem',
+            borderBottom: '1px solid #5a5a5a',
+            backgroundColor: '#3d3d3d'
+          }}>
+            <SearchInput
+              placeholder="Search projects..."
+              value={searchValue}
+              onChange={(_, value) => setSearchValue(value)}
+              onClear={() => setSearchValue('')}
+              style={{ width: '100%' }}
+            />
+          </div>
+          {/* Select/Clear all buttons */}
+          <div style={{
+            display: 'flex',
+            gap: '0.5rem',
+            padding: '0.5rem',
+            borderBottom: '1px solid #5a5a5a',
+            backgroundColor: '#3d3d3d'
+          }}>
+            <Button
+              variant="link"
+              onClick={onSelectAll}
+              style={{ color: '#ffffff', padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+            >
+              Select All
+            </Button>
+            <Button
+              variant="link"
+              onClick={onClearAll}
+              style={{ color: '#ffffff', padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+            >
+              Clear All
+            </Button>
+          </div>
+          {/* Namespace list */}
+          <div
+            className="project-dropdown-list"
+            style={{
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              flex: 1
+            }}
+          >
+            {filteredNamespaces.length === 0 ? (
+              <div style={{
+                padding: '1rem',
+                textAlign: 'center',
+                color: '#ffffff',
+                fontSize: '0.875rem'
+              }}>
+                No projects found
+              </div>
+            ) : (
+              filteredNamespaces.map(namespace => {
+                const isSelected = selectedNamespaces.has(namespace);
+                return (
+                  <div
+                    key={namespace}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      backgroundColor: isSelected ? '#4a4a4a' : 'transparent',
+                      borderBottom: '1px solid #5a5a5a',
+                      color: '#ffffff'
+                    }}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.tagName !== 'INPUT') {
+                        onNamespaceToggle(namespace);
+                      }
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.backgroundColor = '#4a4a4a';
+                      } else {
+                        e.currentTarget.style.backgroundColor = '#5a5a5a';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      } else {
+                        e.currentTarget.style.backgroundColor = '#4a4a4a';
+                      }
+                    }}
+                  >
+                    <Checkbox
+                      id={`namespace-${namespace}`}
+                      isChecked={isSelected}
+                      onChange={() => {
+                        onNamespaceToggle(namespace);
+                      }}
+                      style={{ marginRight: '0.5rem', flexShrink: 0 }}
+                    />
+                    <label
+                      htmlFor={`namespace-${namespace}`}
+                      style={{
+                        cursor: 'pointer',
+                        flex: 1,
+                        fontSize: '0.875rem',
+                        fontWeight: 'normal',
+                        margin: 0,
+                        width: '100%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        color: '#ffffff'
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onNamespaceToggle(namespace);
+                      }}
+                    >
+                      {namespace}
+                    </label>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 const SchedulerPage: React.FC = () => {
   const [nodes, nodesLoaded, nodesError] = useK8sWatchResource<NodeType[]>({
     kind: 'Node',
@@ -1038,10 +1311,22 @@ const SchedulerPage: React.FC = () => {
     namespaced: false,
   });
 
+  const [namespaces] = useK8sWatchResource<NamespaceType[]>({
+    kind: 'Namespace',
+    isList: true,
+    namespaced: false,
+  });
+
   // Default to showing CPU and Memory
   const [selectedResources, setSelectedResources] = useState<Set<string>>(
     new Set(['cpu', 'memory'])
   );
+
+  // Default to showing all namespaces
+  const [selectedNamespaces, setSelectedNamespaces] = useState<Set<string>>(new Set());
+
+  // Option to hide nodes without workloads
+  const [hideEmptyNodes, setHideEmptyNodes] = useState<boolean>(false);
 
   const validNodes = useMemo(() => {
     if (!nodes || !Array.isArray(nodes)) return [];
@@ -1088,16 +1373,53 @@ const SchedulerPage: React.FC = () => {
     });
   };
 
+  // Get list of available namespaces
+  const availableNamespaces = useMemo(() => {
+    if (!namespaces || !Array.isArray(namespaces)) return [];
+    return namespaces
+      .map(ns => ns.metadata.name)
+      .sort((a, b) => a.localeCompare(b));
+  }, [namespaces]);
+
+  const handleNamespaceToggle = (namespace: string) => {
+    setSelectedNamespaces(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(namespace)) {
+        newSet.delete(namespace);
+      } else {
+        newSet.add(namespace);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllNamespaces = () => {
+    setSelectedNamespaces(new Set(availableNamespaces));
+  };
+
+  const handleClearAllNamespaces = () => {
+    setSelectedNamespaces(new Set());
+  };
+
+  // Filter pods based on selected namespaces
+  const filteredPods = useMemo(() => {
+    if (!pods || !Array.isArray(pods)) return [];
+    // If no namespaces selected, show all pods
+    if (selectedNamespaces.size === 0) return pods;
+    // Otherwise, filter by selected namespaces
+    return pods.filter(pod => selectedNamespaces.has(pod.metadata.namespace));
+  }, [pods, selectedNamespaces]);
+
   // Calculate resource requests and limits per node for all resources
   const nodeResourceUsage = useMemo(() => {
     // Structure: { resourceName: { requests: { nodeName: value }, limits: { nodeName: value } } }
     const resourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } } = {};
 
-    if (!pods || !Array.isArray(pods)) {
+    if (!filteredPods || !Array.isArray(filteredPods)) {
       return resourceUsage;
     }
 
-    pods.filter(isValidPod).forEach(pod => {
+    filteredPods.filter(isValidPod).forEach(pod => {
       const nodeName = pod.spec.nodeName;
       if (!nodeName) return;
 
@@ -1160,15 +1482,15 @@ const SchedulerPage: React.FC = () => {
     });
 
     return resourceUsage;
-  }, [pods]);
+  }, [filteredPods]);
 
   // Group pods by node name
   const podsByNode = useMemo(() => {
     const grouped: { [nodeName: string]: PodType[] } = {};
 
-    if (!pods || !Array.isArray(pods)) return grouped;
+    if (!filteredPods || !Array.isArray(filteredPods)) return grouped;
 
-    pods.filter(isValidPod).forEach(pod => {
+    filteredPods.filter(isValidPod).forEach(pod => {
       const nodeName = pod.spec.nodeName;
       if (!nodeName) return;
 
@@ -1179,7 +1501,16 @@ const SchedulerPage: React.FC = () => {
     });
 
     return grouped;
-  }, [pods]);
+  }, [filteredPods]);
+
+  // Filter nodes to only show those with workloads if hideEmptyNodes is enabled
+  const displayNodes = useMemo(() => {
+    if (!hideEmptyNodes) return validNodes;
+    return validNodes.filter(node => {
+      const nodePods = podsByNode[node.metadata.name];
+      return nodePods && nodePods.length > 0;
+    });
+  }, [validNodes, hideEmptyNodes, podsByNode]);
 
   if (nodesError) {
     console.error('Error loading nodes', nodesError);
@@ -1213,13 +1544,32 @@ const SchedulerPage: React.FC = () => {
         }}>
           Cluster Scheduler Overview
         </Title>
-        {nodesLoaded && availableResources.length > 0 && (
-          <ResourceSelector
-            availableResources={availableResources}
-            selectedResources={selectedResources}
-            onResourceToggle={handleResourceToggle}
-          />
-        )}
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {nodesLoaded && availableNamespaces.length > 0 && (
+            <ProjectSelector
+              availableNamespaces={availableNamespaces}
+              selectedNamespaces={selectedNamespaces}
+              onNamespaceToggle={handleNamespaceToggle}
+              onSelectAll={handleSelectAllNamespaces}
+              onClearAll={handleClearAllNamespaces}
+            />
+          )}
+          {nodesLoaded && availableResources.length > 0 && (
+            <ResourceSelector
+              availableResources={availableResources}
+              selectedResources={selectedResources}
+              onResourceToggle={handleResourceToggle}
+            />
+          )}
+          {nodesLoaded && (
+            <Checkbox
+              id="hide-empty-nodes"
+              label="Only show nodes with workloads"
+              isChecked={hideEmptyNodes}
+              onChange={(_, checked) => setHideEmptyNodes(checked)}
+            />
+          )}
+        </div>
       </div>
       <div style={{
         flexGrow: 1,
@@ -1236,8 +1586,8 @@ const SchedulerPage: React.FC = () => {
             <Spinner />
           ) : (
             <>
-              <SchedulingPressure pods={pods || []} />
-              {validNodes.map((node) => {
+              <SchedulingPressure pods={filteredPods || []} />
+              {displayNodes.map((node) => {
                 // Get CPU and Memory usage (for backward compatibility)
                 const cpuData = nodeResourceUsage['cpu'];
                 const memoryData = nodeResourceUsage['memory'];
