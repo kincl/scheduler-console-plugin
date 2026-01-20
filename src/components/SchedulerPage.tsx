@@ -25,6 +25,9 @@ interface NodeType {
   metadata: {
     name: string;
     uid: string;
+    labels?: {
+      [key: string]: string;
+    };
   };
   status: {
     capacity: {
@@ -331,6 +334,52 @@ const GenericResourceBar: React.FC<{
   );
 };
 
+// Extract node roles from labels
+const getNodeRoles = (node: NodeType): string[] => {
+  const roles: string[] = [];
+  const labels = node.metadata?.labels || {};
+  
+  Object.keys(labels).forEach(key => {
+    if (key.startsWith('node-role.kubernetes.io/')) {
+      const role = key.replace('node-role.kubernetes.io/', '');
+      // Skip empty roles or if the value is not "true" or empty
+      if (role && (labels[key] === '' || labels[key] === 'true')) {
+        roles.push(role);
+      }
+    }
+  });
+  
+  return roles.sort();
+};
+
+// Node Roles Component
+const NodeRoles: React.FC<{ node: NodeType }> = ({ node }) => {
+  const roles = getNodeRoles(node);
+  
+  if (roles.length === 0) {
+    return null;
+  }
+  
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      marginLeft: '0.5rem'
+    }}>
+      {roles.map(role => (
+        <Label
+          key={role}
+          color="blue"
+          style={{ fontSize: '0.7rem' }}
+        >
+          {role}
+        </Label>
+      ))}
+    </div>
+  );
+};
+
 // Node Conditions Component
 const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
   const conditions = node.status?.conditions || [];
@@ -602,9 +651,12 @@ const NodeCard: React.FC<{
           borderBottom: '1px solid #D1D1D1'
         }}
       >
-        <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>
-          {node.metadata.name}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>
+            {node.metadata.name}
+          </span>
+          <NodeRoles node={node} />
+        </div>
         <NodeConditions node={node} />
       </CardTitle>
       <CardBody
