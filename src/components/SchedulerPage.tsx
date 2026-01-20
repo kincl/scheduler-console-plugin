@@ -479,7 +479,7 @@ const calculatePodEffectiveMemory = (pod: PodType): number => {
 };
 
 // Pod Box Component - small box representing a pod
-const PodBox: React.FC<{ pod: PodType; width: number }> = ({ pod, width }) => {
+const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ pod, width, showName }) => {
   const getPhaseColor = (phase: string) => {
     switch (phase) {
       case 'Running':
@@ -518,22 +518,44 @@ const PodBox: React.FC<{ pod: PodType; width: number }> = ({ pod, width }) => {
       <div
         style={{
           width: `${width}px`,
-          minWidth: '24px',
+          minWidth: showName ? '48px' : '24px',
           height: '24px',
           backgroundColor: getPhaseColor(pod.status.phase),
           borderRadius: '4px',
           border: '1px solid #D1D1D1',
           cursor: 'help',
-          flexShrink: 0
+          flexShrink: 0,
+          display: showName ? 'flex' : 'block',
+          alignItems: showName ? 'center' : undefined,
+          justifyContent: showName ? 'center' : undefined,
+          padding: showName ? '0.25rem' : undefined,
+          boxSizing: 'border-box',
+          overflow: 'hidden'
         }}
         title={`${pod.metadata.namespace}/${pod.metadata.name}`}
-      />
+      >
+        {showName && (
+          <span style={{
+            color: '#ffffff',
+            fontSize: '0.65rem',
+            fontWeight: 500,
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            width: '100%',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+          }}>
+            {pod.metadata.name}
+          </span>
+        )}
+      </div>
     </Tooltip>
   );
 };
 
 // Pods Display Component - shows all pods for a node
-const PodsDisplay: React.FC<{ pods: PodType[] }> = ({ pods }) => {
+const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean }> = ({ pods, showNames }) => {
   if (pods.length === 0) {
     return null;
   }
@@ -564,9 +586,9 @@ const PodsDisplay: React.FC<{ pods: PodType[] }> = ({ pods }) => {
   // Sort by combined score (descending)
   podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
   
-  // Base width and max width for pod boxes
-  const minWidth = 24;
-  const maxWidth = 120;
+  // Base width and max width for pod boxes - larger when showing names
+  const minWidth = showNames ? 48 : 24;
+  const maxWidth = showNames ? 240 : 120;
 
   return (
     <div style={{
@@ -588,11 +610,11 @@ const PodsDisplay: React.FC<{ pods: PodType[] }> = ({ pods }) => {
             gap: '0.25rem'
       }}>
         {podsWithScore.map(({ pod, combinedScore }) => {
-          // Calculate width proportionally based on combined score (min 24px, max 120px)
+          // Calculate width proportionally based on combined score
           const width = minWidth + combinedScore * (maxWidth - minWidth);
 
           return (
-            <PodBox key={pod.metadata.uid} pod={pod} width={width} />
+            <PodBox key={pod.metadata.uid} pod={pod} width={width} showName={showNames} />
           );
         })}
         </div>
@@ -635,7 +657,8 @@ const NodeCard: React.FC<{
   pods: PodType[];
   selectedResources: Set<string>;
   resourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } };
-}> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods, selectedResources, resourceUsage }) => {
+  showPodNames: boolean;
+}> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods, selectedResources, resourceUsage, showPodNames }) => {
   const totalCPUs = parseCPUQuantity(node.status?.capacity?.cpu || '0');
   const totalMemory = parseMemoryQuantity(node.status?.capacity?.memory || '0');
 
@@ -718,7 +741,7 @@ const NodeCard: React.FC<{
               />
             );
           })}
-        <PodsDisplay pods={pods} />
+        <PodsDisplay pods={pods} showNames={showPodNames} />
       </CardBody>
     </Card>
   );
@@ -772,7 +795,7 @@ const getSchedulingFailureReason = (pod: PodType): string | null => {
 };
 
 // Unschedulable Pod Box Component - small box representing an unschedulable pod
-const UnschedulablePodBox: React.FC<{ pod: PodType; width: number }> = ({ pod, width }) => {
+const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ pod, width, showName }) => {
   const effectiveCPU = calculatePodEffectiveCPU(pod);
   const effectiveMemory = calculatePodEffectiveMemory(pod);
   const memoryFormatted = formatMemory(effectiveMemory);
@@ -799,22 +822,44 @@ const UnschedulablePodBox: React.FC<{ pod: PodType; width: number }> = ({ pod, w
       <div
         style={{
           width: `${width}px`,
-          minWidth: '24px',
+          minWidth: showName ? '48px' : '24px',
           height: '24px',
           backgroundColor: '#8A8D90',
           borderRadius: '4px',
           border: '2px dashed #6A6E73',
           cursor: 'help',
-          flexShrink: 0
+          flexShrink: 0,
+          display: showName ? 'flex' : 'block',
+          alignItems: showName ? 'center' : undefined,
+          justifyContent: showName ? 'center' : undefined,
+          padding: showName ? '0.25rem' : undefined,
+          boxSizing: 'border-box',
+          overflow: 'hidden'
         }}
         title={`${pod.metadata.namespace}/${pod.metadata.name}`}
-      />
+      >
+        {showName && (
+          <span style={{
+            color: '#ffffff',
+            fontSize: '0.65rem',
+            fontWeight: 500,
+            textAlign: 'center',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            width: '100%',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+          }}>
+            {pod.metadata.name}
+          </span>
+        )}
+      </div>
     </Tooltip>
   );
 };
 
 // Scheduling Pressure Component
-const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
+const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean }> = ({ pods, showNames }) => {
   const unscheduledPods = useMemo(() => {
     return pods.filter(pod => 
       isValidPod(pod) &&
@@ -864,9 +909,9 @@ const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
   // Sort by combined score (descending)
   podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
   
-  // Base width and max width for pod boxes
-  const minWidth = 24;
-  const maxWidth = 120;
+  // Base width and max width for pod boxes - larger when showing names
+  const minWidth = showNames ? 48 : 24;
+  const maxWidth = showNames ? 240 : 120;
 
   return (
     <Card style={{ marginBottom: '1rem' }}>
@@ -882,11 +927,11 @@ const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
           gap: '0.25rem'
         }}>
           {podsWithScore.map(({ pod, combinedScore }) => {
-            // Calculate width proportionally based on combined score (min 24px, max 120px)
+            // Calculate width proportionally based on combined score
             const width = minWidth + combinedScore * (maxWidth - minWidth);
 
             return (
-              <UnschedulablePodBox key={pod.metadata.uid} pod={pod} width={width} />
+              <UnschedulablePodBox key={pod.metadata.uid} pod={pod} width={width} showName={showNames} />
             );
           })}
         </div>
@@ -1391,6 +1436,9 @@ const SchedulerPage: React.FC = () => {
   // Option to hide nodes without workloads
   const [hideEmptyNodes, setHideEmptyNodes] = useState<boolean>(false);
 
+  // Option to show pod names
+  const [showPodNames, setShowPodNames] = useState<boolean>(false);
+
   const validNodes = useMemo(() => {
     if (!nodes || !Array.isArray(nodes)) return [];
     return nodes.filter(isValidNode).map((node, index) => ({
@@ -1625,12 +1673,20 @@ const SchedulerPage: React.FC = () => {
             />
           )}
           {nodesLoaded && (
-            <Checkbox
-              id="hide-empty-nodes"
-              label="Only show nodes with workloads"
-              isChecked={hideEmptyNodes}
-              onChange={(_, checked) => setHideEmptyNodes(checked)}
-            />
+            <>
+              <Checkbox
+                id="hide-empty-nodes"
+                label="Only show nodes with workloads"
+                isChecked={hideEmptyNodes}
+                onChange={(_, checked) => setHideEmptyNodes(checked)}
+              />
+              <Checkbox
+                id="show-pod-names"
+                label="Show pod names"
+                isChecked={showPodNames}
+                onChange={(_, checked) => setShowPodNames(checked)}
+              />
+            </>
           )}
         </div>
       </div>
@@ -1649,7 +1705,7 @@ const SchedulerPage: React.FC = () => {
             <Spinner />
           ) : (
             <>
-              <SchedulingPressure pods={filteredPods || []} />
+              <SchedulingPressure pods={filteredPods || []} showNames={showPodNames} />
               {displayNodes.map((node) => {
                 // Get CPU and Memory usage (for backward compatibility)
                 const cpuData = nodeResourceUsage['cpu'];
@@ -1666,6 +1722,7 @@ const SchedulerPage: React.FC = () => {
                     pods={podsByNode[node.metadata.name] || []}
                     selectedResources={selectedResources}
                     resourceUsage={nodeResourceUsage}
+                    showPodNames={showPodNames}
                   />
                 );
               })}
