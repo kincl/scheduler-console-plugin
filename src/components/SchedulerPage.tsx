@@ -532,7 +532,6 @@ const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ 
           boxSizing: 'border-box',
           overflow: 'hidden'
         }}
-        title={`${pod.metadata.namespace}/${pod.metadata.name}`}
       >
         {showName && (
           <span style={{
@@ -836,7 +835,6 @@ const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boo
           boxSizing: 'border-box',
           overflow: 'hidden'
         }}
-        title={`${pod.metadata.namespace}/${pod.metadata.name}`}
       >
         {showName && (
           <span style={{
