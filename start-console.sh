@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-CONSOLE_IMAGE=${CONSOLE_IMAGE:="quay.io/openshift/origin-console:latest"}
+CONSOLE_IMAGE=${CONSOLE_IMAGE:="quay.io/openshift/origin-console:4.19"}
 CONSOLE_PORT=${CONSOLE_PORT:=9000}
 CONSOLE_IMAGE_PLATFORM=${CONSOLE_IMAGE_PLATFORM:="linux/amd64"}
 
@@ -35,20 +35,25 @@ fi
 
 echo "API Server: $BRIDGE_K8S_MODE_OFF_CLUSTER_ENDPOINT"
 echo "Console Image: $CONSOLE_IMAGE"
-echo "Console URL: http://localhost:${CONSOLE_PORT}"
+echo "Console URL: http://rhel9:${CONSOLE_PORT}"
 echo "Console Platform: $CONSOLE_IMAGE_PLATFORM"
 
-# Prefer podman if installed. Otherwise, fall back to docker.
-if [ -x "$(command -v podman)" ]; then
-    if [ "$(uname -s)" = "Linux" ]; then
-        # Use host networking on Linux since host.containers.internal is unreachable in some environments.
-        BRIDGE_PLUGINS="${PLUGIN_NAME}=http://localhost:9001"
-        podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --network=host --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
-    else
-        BRIDGE_PLUGINS="${PLUGIN_NAME}=http://host.containers.internal:9001"
-        podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
-    fi
-else
-    BRIDGE_PLUGINS="${PLUGIN_NAME}=http://host.docker.internal:9001"
-    docker run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
-fi
+
+BRIDGE_PLUGINS="${PLUGIN_NAME}=http://192.168.4.90:9001"
+export CONTAINER_HOST="ssh://jason@rhel9-local.kinclfamily.net:22/run/user/1001/podman/podman.sock"
+podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --network=host --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
+
+# # Prefer podman if installed. Otherwise, fall back to docker.
+# if [ -x "$(command -v podman)" ]; then
+#     if [ "$(uname -s)" = "Linux" ]; then
+#         # Use host networking on Linux since host.containers.internal is unreachable in some environments.
+#         BRIDGE_PLUGINS="${PLUGIN_NAME}=http://jkincl-mac:9001"
+#         podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --network=host --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
+#     else
+#         BRIDGE_PLUGINS="${PLUGIN_NAME}=http://host.containers.internal:9001"
+#         podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
+#     fi
+# else
+#     BRIDGE_PLUGINS="${PLUGIN_NAME}=http://host.docker.internal:9001"
+#     docker run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
+# fi

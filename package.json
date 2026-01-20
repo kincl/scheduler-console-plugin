@@ -1,12 +1,12 @@
 {
-  "name": "console-plugin-template",
+  "name": "scheduler-console-plugin",
   "version": "0.0.1",
-  "description": "Template project for OpenShift Console plugins",
+  "description": "Scheduler plugin for visualizing the scheduler in OpenShift Console",
   "private": true,
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openshift/console-plugin-template.git"
+    "url": "https://github.com/kincl/scheduler-console-plugin.git"
   },
   "scripts": {
     "clean": "rm -rf dist",
@@ -69,12 +69,12 @@
     "webpack-dev-server": "^4.7.4"
   },
   "consolePlugin": {
-    "name": "console-plugin-template",
+    "name": "scheduler-console-plugin",
     "version": "0.0.1",
-    "displayName": "OpenShift Console Plugin Template",
-    "description": "Template project for OpenShift Console plugins. Edit package.json to change this message and the plugin name.",
+    "displayName": "Scheduler Console Plugin",
+    "description": "Scheduler plugin for visualizing the scheduler in OpenShift Console",
     "exposedModules": {
-      "ExamplePage": "./components/ExamplePage"
+      "SchedulerPage": "./components/SchedulerPage"
     },
     "dependencies": {
       "@console/pluginAPI": "*"

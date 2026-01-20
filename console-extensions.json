@@ -3,16 +3,16 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/example",
-      "component": { "$codeRef": "ExamplePage" }
+      "path": "/scheduler",
+      "component": { "$codeRef": "SchedulerPage" }
     }
   },
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "example",
-      "name": "%plugin__console-plugin-template~Plugin Example%",
-      "href": "/example",
+      "id": "scheduler",
+      "name": "Scheduler",
+      "href": "/scheduler",
       "perspective": "admin",
       "section": "home"
     }

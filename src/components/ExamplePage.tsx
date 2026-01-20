@@ -1,11 +1,11 @@
-import * as React from 'react';
+import React from 'react';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import { Content, PageSection, Title } from '@patternfly/react-core';
 import { CheckCircleIcon } from '@patternfly/react-icons';
 import './example.css';
 
-export default function ExamplePage() {
+const ExamplePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
 
   return (
@@ -38,4 +38,6 @@ export default function ExamplePage() {
       </PageSection>
     </>
   );
-}
+};
+
+export default ExamplePage;
