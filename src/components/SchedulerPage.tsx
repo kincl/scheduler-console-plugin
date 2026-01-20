@@ -1,4 +1,4 @@
-import React, { useMemo, Suspense } from 'react';
+import React, { useMemo, Suspense, useState, useRef, useEffect } from 'react';
 import {
   Title,
   Card,
@@ -8,6 +8,8 @@ import {
   Label,
   Alert,
   Tooltip,
+  Checkbox,
+  Button,
 } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 
@@ -26,8 +28,7 @@ interface NodeType {
   };
   status: {
     capacity: {
-      cpu: string;
-      memory: string;
+      [key: string]: string;
     };
     conditions?: NodeCondition[];
   };
@@ -52,12 +53,10 @@ interface PodType {
     containers: Array<{
       resources?: {
         requests?: {
-          cpu?: string;
-          memory?: string;
+          [key: string]: string;
         };
         limits?: {
-          cpu?: string;
-          memory?: string;
+          [key: string]: string;
         };
       };
     }>;
@@ -74,8 +73,8 @@ const parseCPUQuantity = (quantity: string): number => {
 
   // Handle formats like "2", "2000m", "2.5", etc.
   const cpuMatch = quantity.match(/^(\d+(?:\.\d+)?)([m])?$/);
-  if (cpuMatch) {
-    const [, value, suffix] = cpuMatch;
+    if (cpuMatch) {
+      const [, value, suffix] = cpuMatch;
     // If it has 'm' suffix, it's millicores, convert to cores
     return suffix === 'm' ? parseFloat(value) / 1000 : parseFloat(value);
   }
@@ -139,10 +138,10 @@ const SingleCPUBar: React.FC<{
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={{
-        display: 'flex',
+    <div style={{
+      display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
+      alignItems: 'center',
         marginBottom: '0.25rem'
       }}>
         <span style={{ fontSize: '0.7rem', fontWeight: 500 }}>{label}</span>
@@ -155,10 +154,10 @@ const SingleCPUBar: React.FC<{
         height: '12px',
         backgroundColor: '#F0F0F0',
         borderRadius: '2px',
-        overflow: 'hidden',
+      overflow: 'hidden',
         position: 'relative',
         border: '1px solid #D1D1D1'
-      }}>
+    }}>
         <div
           style={{
             width: `${percentageUsed}%`,
@@ -279,6 +278,59 @@ const EffectiveMemoryBar: React.FC<{
   );
 };
 
+// Generic Resource Bar Component for other capacity resources
+const GenericResourceBar: React.FC<{
+  total: number;
+  used: number;
+  nodeName: string;
+  label: string;
+  formatValue: (value: number) => string;
+}> = ({ total, used, nodeName, label, formatValue }) => {
+  const percentageUsed = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+
+  // Color based on utilization
+  const getBarColor = () => {
+    if (percentageUsed < 70) return '#3E8635'; // green
+    if (percentageUsed < 90) return '#F0AB00'; // orange/warning
+    return '#C9190B'; // red/danger
+  };
+
+  return (
+    <div style={{ width: '100%' }}>
+    <div style={{
+      display: 'flex',
+        justifyContent: 'space-between',
+      alignItems: 'center',
+        marginBottom: '0.25rem'
+      }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
+          {formatValue(used)} / {formatValue(total)}
+        </span>
+      </div>
+      <div style={{
+      width: '100%',
+        height: '12px',
+        backgroundColor: '#F0F0F0',
+        borderRadius: '2px',
+      overflow: 'hidden',
+        position: 'relative',
+        border: '1px solid #D1D1D1'
+    }}>
+        <div
+          style={{
+            width: `${percentageUsed}%`,
+            height: '100%',
+            backgroundColor: getBarColor(),
+            transition: 'width 0.3s ease, background-color 0.3s ease'
+          }}
+          title={`${nodeName}: ${formatValue(used)} of ${formatValue(total)} ${label.toLowerCase()}`}
+        />
+      </div>
+    </div>
+  );
+};
+
 // Node Conditions Component
 const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
   const conditions = node.status?.conditions || [];
@@ -313,10 +365,10 @@ const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
 
   // Sort conditions: Ready first, then others
   const sortedConditions = [...displayConditions].sort((a, b) => {
-    if (a.type === 'Ready') return -1;
-    if (b.type === 'Ready') return 1;
-    return a.type.localeCompare(b.type);
-  });
+      if (a.type === 'Ready') return -1;
+      if (b.type === 'Ready') return 1;
+      return a.type.localeCompare(b.type);
+    });
 
   return (
     <div style={{
@@ -359,7 +411,7 @@ const calculatePodEffectiveMemory = (pod: PodType): number => {
   let totalRequests = 0;
   let totalLimits = 0;
 
-  pod.spec.containers.forEach(container => {
+      pod.spec.containers.forEach(container => {
     const memoryRequest = container.resources?.requests?.memory || '0';
     const memoryLimit = container.resources?.limits?.memory || '0';
     totalRequests += parseMemoryQuantity(memoryRequest);
@@ -474,9 +526,9 @@ const PodsDisplay: React.FC<{ pods: PodType[] }> = ({ pods }) => {
         Pods ({pods.length})
       </div>
       <div style={{
-        display: 'flex',
+            display: 'flex',
         flexWrap: 'wrap',
-        gap: '0.25rem'
+            gap: '0.25rem'
       }}>
         {podsWithScore.map(({ pod, combinedScore }) => {
           // Calculate width proportionally based on combined score (min 24px, max 120px)
@@ -486,9 +538,35 @@ const PodsDisplay: React.FC<{ pods: PodType[] }> = ({ pods }) => {
             <PodBox key={pod.metadata.uid} pod={pod} width={width} />
           );
         })}
-      </div>
+        </div>
     </div>
   );
+};
+
+// Parse a generic resource quantity (handles numbers, memory-like units, etc.)
+const parseGenericResource = (quantity: string): number => {
+  if (!quantity) return 0;
+  
+  // Try parsing as a number first (for things like pods count)
+  const numericValue = parseFloat(quantity);
+  if (!isNaN(numericValue) && !quantity.match(/[KMGTPE]i?$/)) {
+    return numericValue;
+  }
+  
+  // Try parsing as memory (for storage-like resources)
+  return parseMemoryQuantity(quantity);
+};
+
+// Format a generic resource value
+const formatGenericResource = (value: number, resourceType: string): string => {
+  // For numeric resources (like pods), just return the number
+  if (resourceType === 'pods' || (!isNaN(value) && value === Math.floor(value))) {
+    return value.toString();
+  }
+  
+  // For memory-like resources, format as memory
+  const formatted = formatMemory(value);
+  return `${formatted.value} ${formatted.unit}`;
 };
 
 const NodeCard: React.FC<{ 
@@ -498,7 +576,9 @@ const NodeCard: React.FC<{
   requestedMemory: number;
   limitedMemory: number;
   pods: PodType[];
-}> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods }) => {
+  selectedResources: Set<string>;
+  resourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } };
+}> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods, selectedResources, resourceUsage }) => {
   const totalCPUs = parseCPUQuantity(node.status?.capacity?.cpu || '0');
   const totalMemory = parseMemoryQuantity(node.status?.capacity?.memory || '0');
 
@@ -537,18 +617,47 @@ const NodeCard: React.FC<{
           gap: '0.5rem'
         }}
       >
-        <EffectiveCPUBar
-          totalCPUs={totalCPUs}
-          requestedCPUs={requestedCPUs}
-          limitedCPUs={limitedCPUs}
-          nodeName={node.metadata.name}
-        />
-        <EffectiveMemoryBar
-          totalMemory={totalMemory}
-          requestedMemory={requestedMemory}
-          limitedMemory={limitedMemory}
-          nodeName={node.metadata.name}
-        />
+        {selectedResources.has('cpu') && (
+          <EffectiveCPUBar
+            totalCPUs={totalCPUs}
+            requestedCPUs={requestedCPUs}
+            limitedCPUs={limitedCPUs}
+            nodeName={node.metadata.name}
+          />
+        )}
+        {selectedResources.has('memory') && (
+          <EffectiveMemoryBar
+            totalMemory={totalMemory}
+            requestedMemory={requestedMemory}
+            limitedMemory={limitedMemory}
+            nodeName={node.metadata.name}
+          />
+        )}
+        {Array.from(selectedResources)
+          .filter(resource => resource !== 'cpu' && resource !== 'memory')
+          .map(resource => {
+            const capacity = node.status?.capacity?.[resource];
+            if (!capacity) return null;
+            
+            const total = parseGenericResource(capacity);
+            
+            // Get usage from resourceUsage
+            const resourceData = resourceUsage[resource];
+            const requested = resourceData?.requests?.[node.metadata.name] || 0;
+            const limited = resourceData?.limits?.[node.metadata.name] || 0;
+            const used = Math.max(requested, limited);
+            
+            return (
+              <GenericResourceBar
+                key={resource}
+                total={total}
+                used={used}
+                nodeName={node.metadata.name}
+                label={`Effective ${resource.charAt(0).toUpperCase() + resource.slice(1)}`}
+                formatValue={(value) => formatGenericResource(value, resource)}
+              />
+            );
+          })}
         <PodsDisplay pods={pods} />
       </CardBody>
     </Card>
@@ -565,8 +674,7 @@ const isValidNode = (node: any): node is NodeType => {
     node.status &&
     typeof node.status === 'object' &&
     node.status.capacity &&
-    typeof node.status.capacity.cpu === 'string' &&
-    typeof node.status.capacity.memory === 'string'
+    typeof node.status.capacity === 'object'
   );
 };
 
@@ -663,6 +771,208 @@ const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
   );
 };
 
+// Resource Selector Component - Dropdown Multiselect
+const ResourceSelector: React.FC<{
+  availableResources: string[];
+  selectedResources: Set<string>;
+  onResourceToggle: (resource: string) => void;
+}> = ({ availableResources, selectedResources, onResourceToggle }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Calculate dropdown position and width when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      
+      // Calculate width based on longest resource name
+      // Create a temporary element to measure text width
+      const tempElement = document.createElement('span');
+      tempElement.style.visibility = 'hidden';
+      tempElement.style.position = 'absolute';
+      tempElement.style.fontSize = '0.875rem';
+      tempElement.style.padding = '0 1rem';
+      document.body.appendChild(tempElement);
+      
+      let maxWidth = 200; // minimum width
+      availableResources.forEach(resource => {
+        const resourceText = resource.charAt(0).toUpperCase() + resource.slice(1);
+        tempElement.textContent = resourceText;
+        const textWidth = tempElement.offsetWidth;
+        // Add space for checkbox (24px) + margin (0.5rem) + padding (2rem total)
+        const totalWidth = textWidth + 24 + 16 + 32;
+        maxWidth = Math.max(maxWidth, totalWidth);
+      });
+      
+      document.body.removeChild(tempElement);
+      
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: maxWidth
+      });
+    }
+  }, [isOpen, availableResources]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        buttonRef.current && 
+        buttonRef.current.contains(event.target as Node)
+      ) {
+        return;
+      }
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedCount = selectedResources.size;
+  const buttonText = selectedCount === 0 
+    ? 'Select Resources' 
+    : `Resources (${selectedCount})`;
+
+  return (
+    <>
+      <div style={{ display: 'inline-block' }}>
+        <Button
+          ref={buttonRef}
+          variant="control"
+          onClick={() => setIsOpen(!isOpen)}
+          style={{
+            minWidth: '200px',
+            textAlign: 'left',
+            justifyContent: 'space-between'
+          }}
+        >
+          <span>{buttonText}</span>
+          <span style={{ marginLeft: '0.5rem' }}>{isOpen ? '▲' : '▼'}</span>
+        </Button>
+      </div>
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          className="resource-dropdown"
+          style={{
+            position: 'fixed',
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`,
+            maxHeight: '300px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+            zIndex: 9999,
+            padding: 0,
+            border: 'none',
+            backgroundColor: '#3d3d3d'
+          }}
+        >
+          <style>{`
+            .resource-dropdown::-webkit-scrollbar {
+              width: 12px;
+            }
+            .resource-dropdown::-webkit-scrollbar-track {
+              background: #3d3d3d;
+            }
+            .resource-dropdown::-webkit-scrollbar-thumb {
+              background: #5a5a5a;
+              border-radius: 6px;
+            }
+            .resource-dropdown::-webkit-scrollbar-thumb:hover {
+              background: #6a6a6a;
+            }
+          `}</style>
+          {availableResources.map(resource => {
+            const isSelected = selectedResources.has(resource);
+            return (
+              <div
+                key={resource}
+                style={{
+                  padding: '0.5rem 1rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  backgroundColor: isSelected ? '#4a4a4a' : 'transparent',
+                  borderBottom: '1px solid #5a5a5a',
+                  color: '#ffffff'
+                }}
+                onClick={(e) => {
+                  // Toggle when clicking anywhere on the row (div, label, or checkbox)
+                  const target = e.target as HTMLElement;
+                  if (target.tagName !== 'INPUT') {
+                    onResourceToggle(resource);
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = '#4a4a4a';
+                  } else {
+                    e.currentTarget.style.backgroundColor = '#5a5a5a';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  } else {
+                    e.currentTarget.style.backgroundColor = '#4a4a4a';
+                  }
+                }}
+              >
+                <Checkbox
+                  id={`resource-${resource}`}
+                  isChecked={isSelected}
+                  onChange={(checked) => {
+                    onResourceToggle(resource);
+                  }}
+                  style={{ marginRight: '0.5rem', flexShrink: 0 }}
+                />
+                <label
+                  htmlFor={`resource-${resource}`}
+                  style={{
+                    cursor: 'pointer',
+                    flex: 1,
+                    fontSize: '0.875rem',
+                    fontWeight: 'normal',
+                    margin: 0,
+                    width: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    color: '#ffffff'
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onResourceToggle(resource);
+                  }}
+                >
+                  {resource.charAt(0).toUpperCase() + resource.slice(1)}
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+};
+
 const SchedulerPage: React.FC = () => {
   const [nodes, nodesLoaded, nodesError] = useK8sWatchResource<NodeType[]>({
     kind: 'Node',
@@ -676,6 +986,11 @@ const SchedulerPage: React.FC = () => {
     namespaced: false,
   });
 
+  // Default to showing CPU and Memory
+  const [selectedResources, setSelectedResources] = useState<Set<string>>(
+    new Set(['cpu', 'memory'])
+  );
+
   const validNodes = useMemo(() => {
     if (!nodes || !Array.isArray(nodes)) return [];
     return nodes.filter(isValidNode).map((node, index) => ({
@@ -684,49 +999,115 @@ const SchedulerPage: React.FC = () => {
     }));
   }, [nodes]);
 
-  // Calculate CPU and Memory requests and limits per node
+  // Discover available capacity resources from nodes
+  const availableResources = useMemo(() => {
+    const resources = new Set<string>();
+    if (!nodes || !Array.isArray(nodes)) return Array.from(resources);
+    
+    nodes.forEach(node => {
+      if (node.status?.capacity) {
+        Object.keys(node.status.capacity).forEach(resource => {
+          resources.add(resource);
+        });
+      }
+    });
+    
+    // Sort resources: cpu and memory first, then others alphabetically
+    const sorted = Array.from(resources).sort((a, b) => {
+      if (a === 'cpu') return -1;
+      if (b === 'cpu') return 1;
+      if (a === 'memory') return -1;
+      if (b === 'memory') return 1;
+      return a.localeCompare(b);
+    });
+    
+    return sorted;
+  }, [nodes]);
+
+  const handleResourceToggle = (resource: string) => {
+    setSelectedResources(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(resource)) {
+        newSet.delete(resource);
+      } else {
+        newSet.add(resource);
+      }
+      return newSet;
+    });
+  };
+
+  // Calculate resource requests and limits per node for all resources
   const nodeResourceUsage = useMemo(() => {
-    const cpuRequests: { [nodeName: string]: number } = {};
-    const cpuLimits: { [nodeName: string]: number } = {};
-    const memoryRequests: { [nodeName: string]: number } = {};
-    const memoryLimits: { [nodeName: string]: number } = {};
+    // Structure: { resourceName: { requests: { nodeName: value }, limits: { nodeName: value } } }
+    const resourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } } = {};
 
     if (!pods || !Array.isArray(pods)) {
-      return { cpuRequests, cpuLimits, memoryRequests, memoryLimits };
+      return resourceUsage;
     }
 
     pods.filter(isValidPod).forEach(pod => {
       const nodeName = pod.spec.nodeName;
       if (!nodeName) return;
 
-      // Sum CPU and Memory requests and limits from all containers in the pod
-      const podCPURequest = pod.spec.containers.reduce((sum, container) => {
-        const cpuRequest = container.resources?.requests?.cpu || '0';
-        return sum + parseCPUQuantity(cpuRequest);
-      }, 0);
+      // Process all resources from all containers in the pod
+      pod.spec.containers.forEach(container => {
+        // Process requests
+        if (container.resources?.requests) {
+          Object.keys(container.resources.requests).forEach(resourceName => {
+            const resourceValue = container.resources.requests![resourceName];
+            if (!resourceValue) return;
 
-      const podCPULimit = pod.spec.containers.reduce((sum, container) => {
-        const cpuLimit = container.resources?.limits?.cpu || '0';
-        return sum + parseCPUQuantity(cpuLimit);
-      }, 0);
+            if (!resourceUsage[resourceName]) {
+              resourceUsage[resourceName] = { requests: {}, limits: {} };
+            }
+            if (!resourceUsage[resourceName].requests[nodeName]) {
+              resourceUsage[resourceName].requests[nodeName] = 0;
+            }
 
-      const podMemoryRequest = pod.spec.containers.reduce((sum, container) => {
-        const memoryRequest = container.resources?.requests?.memory || '0';
-        return sum + parseMemoryQuantity(memoryRequest);
-      }, 0);
+            // Parse based on resource type
+            let parsedValue = 0;
+            if (resourceName === 'cpu') {
+              parsedValue = parseCPUQuantity(resourceValue);
+            } else if (resourceName === 'memory') {
+              parsedValue = parseMemoryQuantity(resourceValue);
+            } else {
+              parsedValue = parseGenericResource(resourceValue);
+            }
 
-      const podMemoryLimit = pod.spec.containers.reduce((sum, container) => {
-        const memoryLimit = container.resources?.limits?.memory || '0';
-        return sum + parseMemoryQuantity(memoryLimit);
-      }, 0);
+            resourceUsage[resourceName].requests[nodeName] += parsedValue;
+          });
+        }
 
-      cpuRequests[nodeName] = (cpuRequests[nodeName] || 0) + podCPURequest;
-      cpuLimits[nodeName] = (cpuLimits[nodeName] || 0) + podCPULimit;
-      memoryRequests[nodeName] = (memoryRequests[nodeName] || 0) + podMemoryRequest;
-      memoryLimits[nodeName] = (memoryLimits[nodeName] || 0) + podMemoryLimit;
+        // Process limits
+        if (container.resources?.limits) {
+          Object.keys(container.resources.limits).forEach(resourceName => {
+            const resourceValue = container.resources.limits![resourceName];
+            if (!resourceValue) return;
+
+            if (!resourceUsage[resourceName]) {
+              resourceUsage[resourceName] = { requests: {}, limits: {} };
+            }
+            if (!resourceUsage[resourceName].limits[nodeName]) {
+              resourceUsage[resourceName].limits[nodeName] = 0;
+            }
+
+            // Parse based on resource type
+            let parsedValue = 0;
+            if (resourceName === 'cpu') {
+              parsedValue = parseCPUQuantity(resourceValue);
+            } else if (resourceName === 'memory') {
+              parsedValue = parseMemoryQuantity(resourceValue);
+            } else {
+              parsedValue = parseGenericResource(resourceValue);
+            }
+
+            resourceUsage[resourceName].limits[nodeName] += parsedValue;
+          });
+        }
+      });
     });
 
-    return { cpuRequests, cpuLimits, memoryRequests, memoryLimits };
+    return resourceUsage;
   }, [pods]);
 
   // Group pods by node name
@@ -764,14 +1145,29 @@ const SchedulerPage: React.FC = () => {
       <div style={{
         width: '100%',
         padding: '1rem',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '1rem',
+        flexWrap: 'wrap'
       }}>
         <Title headingLevel="h1" style={{
-          marginBottom: '1rem',
-          width: '100%'
+          margin: 0,
+          flex: '0 0 auto'
         }}>
           Cluster Scheduler Overview
         </Title>
+        {nodesLoaded && availableResources.length > 0 && (
+          <ResourceSelector
+            availableResources={availableResources}
+            selectedResources={selectedResources}
+            onResourceToggle={handleResourceToggle}
+          />
+        )}
       </div>
       <div style={{
         flexGrow: 1,
@@ -789,17 +1185,25 @@ const SchedulerPage: React.FC = () => {
           ) : (
             <>
               <SchedulingPressure pods={pods || []} />
-              {validNodes.map((node) => (
-                <NodeCard
-                  key={node._key}
-                  node={node}
-                  requestedCPUs={nodeResourceUsage.cpuRequests[node.metadata.name] || 0}
-                  limitedCPUs={nodeResourceUsage.cpuLimits[node.metadata.name] || 0}
-                  requestedMemory={nodeResourceUsage.memoryRequests[node.metadata.name] || 0}
-                  limitedMemory={nodeResourceUsage.memoryLimits[node.metadata.name] || 0}
-                  pods={podsByNode[node.metadata.name] || []}
-                />
-              ))}
+              {validNodes.map((node) => {
+                // Get CPU and Memory usage (for backward compatibility)
+                const cpuData = nodeResourceUsage['cpu'];
+                const memoryData = nodeResourceUsage['memory'];
+                
+                return (
+                  <NodeCard
+                    key={node._key}
+                    node={node}
+                    requestedCPUs={cpuData?.requests?.[node.metadata.name] || 0}
+                    limitedCPUs={cpuData?.limits?.[node.metadata.name] || 0}
+                    requestedMemory={memoryData?.requests?.[node.metadata.name] || 0}
+                    limitedMemory={memoryData?.limits?.[node.metadata.name] || 0}
+                    pods={podsByNode[node.metadata.name] || []}
+                    selectedResources={selectedResources}
+                    resourceUsage={nodeResourceUsage}
+                  />
+                );
+              })}
             </>
           )}
         </Suspense>
