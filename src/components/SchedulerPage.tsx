@@ -554,7 +554,7 @@ const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ 
 };
 
 // Pods Display Component - shows all pods for a node
-const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean }> = ({ pods, showNames }) => {
+const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean; title: string }> = ({ pods, showNames, title }) => {
   if (pods.length === 0) {
     return null;
   }
@@ -601,7 +601,7 @@ const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean }> = ({ pods, 
         marginBottom: '0.5rem',
         color: '#6A6E73'
       }}>
-        Pods ({pods.length})
+        {title} ({pods.length})
       </div>
       <div style={{
             display: 'flex',
@@ -660,6 +660,17 @@ const NodeCard: React.FC<{
 }> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods, selectedResources, resourceUsage, showPodNames }) => {
   const totalCPUs = parseCPUQuantity(node.status?.capacity?.cpu || '0');
   const totalMemory = parseMemoryQuantity(node.status?.capacity?.memory || '0');
+
+  // Separate pods into regular and system pods
+  const regularPods = pods.filter(pod => {
+    const namespace = pod.metadata.namespace;
+    return !namespace.startsWith('kube-') && !namespace.startsWith('openshift-');
+  });
+
+  const systemPods = pods.filter(pod => {
+    const namespace = pod.metadata.namespace;
+    return namespace.startsWith('kube-') || namespace.startsWith('openshift-');
+  });
 
   return (
     <Card
@@ -740,7 +751,8 @@ const NodeCard: React.FC<{
               />
             );
           })}
-        <PodsDisplay pods={pods} showNames={showPodNames} />
+        <PodsDisplay pods={regularPods} showNames={showPodNames} title="Pods" />
+        <PodsDisplay pods={systemPods} showNames={showPodNames} title="System Pods" />
       </CardBody>
     </Card>
   );
