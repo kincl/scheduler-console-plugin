@@ -4,12 +4,9 @@ import {
   Card,
   CardTitle,
   CardBody,
-  Flex,
-  FlexItem,
-  Label,
-  Progress,
-  ProgressVariant,
   Spinner,
+  Label,
+  Alert,
   Tooltip,
 } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
@@ -19,6 +16,7 @@ interface NodeCondition {
   status: string;
   reason?: string;
   message?: string;
+  lastTransitionTime?: string;
 }
 
 interface NodeType {
@@ -27,16 +25,20 @@ interface NodeType {
     uid: string;
   };
   status: {
-    allocatable: {
-      cpu: string;
-      memory: string;
-    };
     capacity: {
       cpu: string;
       memory: string;
     };
     conditions?: NodeCondition[];
   };
+}
+
+interface PodCondition {
+  type: string;
+  status: string;
+  reason?: string;
+  message?: string;
+  lastTransitionTime?: string;
 }
 
 interface PodType {
@@ -46,7 +48,7 @@ interface PodType {
     namespace: string;
   };
   spec: {
-    nodeName: string;
+    nodeName?: string;
     containers: Array<{
       resources?: {
         requests?: {
@@ -62,23 +64,31 @@ interface PodType {
   };
   status: {
     phase: string;
+    conditions?: PodCondition[];
   };
 }
 
-const parseResourceQuantity = (quantity: string, resourceType: 'cpu' | 'memory' = 'memory'): number => {
+// Parse CPU quantity to cores (as a number)
+const parseCPUQuantity = (quantity: string): number => {
   if (!quantity) return 0;
 
-  // Normalize CPU to millicores
-  if (resourceType === 'cpu') {
-    const cpuMatch = quantity.match(/^(\d+)([m])?$/);
-    if (cpuMatch) {
-      const [, value, suffix] = cpuMatch;
-      return suffix === 'm' ? parseFloat(value) : parseFloat(value) * 1000;
-    }
-    return parseFloat(quantity) * 1000;
+  // Handle formats like "2", "2000m", "2.5", etc.
+  const cpuMatch = quantity.match(/^(\d+(?:\.\d+)?)([m])?$/);
+  if (cpuMatch) {
+    const [, value, suffix] = cpuMatch;
+    // If it has 'm' suffix, it's millicores, convert to cores
+    return suffix === 'm' ? parseFloat(value) / 1000 : parseFloat(value);
   }
+  
+  // If no match, try to parse as float
+  return parseFloat(quantity) || 0;
+};
 
-  // Normalize memory to bytes
+// Parse memory quantity to bytes (as a number)
+const parseMemoryQuantity = (quantity: string): number => {
+  if (!quantity) return 0;
+
+  // Handle formats like "1Gi", "512Mi", "2Ki", etc.
   const units: {[key: string]: number} = {
     'Ki': 1024,
     'Mi': 1024 * 1024,
@@ -88,430 +98,416 @@ const parseResourceQuantity = (quantity: string, resourceType: 'cpu' | 'memory' 
     'Ei': 1024 * 1024 * 1024 * 1024 * 1024 * 1024
   };
 
-  const match = quantity.match(/^(\d+)([KMGTPE]i)?$/);
+  const match = quantity.match(/^(\d+(?:\.\d+)?)([KMGTPE]i)?$/);
   if (match) {
     const [, value, unit] = match;
     return unit ? parseFloat(value) * units[unit] : parseFloat(value);
   }
 
-  // If no unit, assume it's bytes
-  return parseFloat(quantity);
+  // If no match, try to parse as bytes
+  return parseFloat(quantity) || 0;
 };
 
-const formatMemory = (bytes: number, totalQuantity?: string): { value: string, unit: string } => {
-  const gib = bytes / (1024 * 1024 * 1024);
-
-  // If total quantity is provided, try to match its unit
-  if (totalQuantity) {
-    const totalMatch = totalQuantity.match(/(\d+)([KMGTPE]i)?$/);
-    if (totalMatch) {
-      const [, , unit] = totalMatch;
-      if (unit) {
-        // If total is in Ki, convert to GiB
-        if (unit === 'Ki') {
-          const totalBytes = parseResourceQuantity(totalQuantity);
-          return { value: ((totalBytes / (1024 * 1024 * 1024)) > 0 ? gib : 0).toFixed(2), unit: 'GiB' };
-        }
-      }
-    }
+// Format memory bytes to human-readable string
+const formatMemory = (bytes: number): { value: string, unit: string } => {
+  if (bytes === 0) return { value: '0', unit: 'B' };
+  
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  let size = bytes;
+  let unitIndex = 0;
+  
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
   }
-
-  return { value: gib.toFixed(2), unit: 'GiB' };
+  
+  return {
+    value: size.toFixed(2),
+    unit: units[unitIndex]
+  };
 };
 
-const ResourceProgress: React.FC<{
-  total: string;
-  used: number;
+// Single CPU Bar Component
+const SingleCPUBar: React.FC<{
+  totalCPUs: number;
+  usedCPUs: number;
+  nodeName: string;
   label: string;
-  resourceType: 'millicores' | 'bytes';
-}> = ({ total, used, label, resourceType }) => {
-  const totalValue = parseResourceQuantity(total, label.includes('CPU') ? 'cpu' : 'memory');
-  const percentageUsed = totalValue > 0 ? Math.min((used / totalValue) * 100, 100) : 0;
-
-  const getVariant = () => {
-    if (percentageUsed < 70) return ProgressVariant.success;
-    if (percentageUsed < 90) return ProgressVariant.warning;
-    return ProgressVariant.danger;
-  };
-
-  // Format for display based on resourceType
-  const formattedUsed = resourceType === 'millicores'
-    ? `${(used / 1000).toFixed(2)} cores`
-    : formatMemory(used, total);
-
-  // Remove redundant 'Usage' from label
-  const cleanLabel = label.replace(' Usage', '');
-
-  // Ensure formattedUsed is an object for non-millicores case
-  const displayUsed = typeof formattedUsed === 'string'
-    ? formattedUsed
-    : formattedUsed.value;
-  const displayUnit = typeof formattedUsed === 'string'
-    ? ''
-    : formattedUsed.unit;
-
-  const totalFormatted = formatMemory(parseResourceQuantity(total), total);
+  barColor: string;
+}> = ({ totalCPUs, usedCPUs, nodeName, label, barColor }) => {
+  const percentageUsed = totalCPUs > 0 ? Math.min((usedCPUs / totalCPUs) * 100, 100) : 0;
 
   return (
-    <Flex direction={{ default: 'column' }}>
-      <FlexItem>
-        <Label color="blue">{cleanLabel}</Label>
-      </FlexItem>
-      <FlexItem>
-        <Progress
-          value={percentageUsed}
-          title={`${cleanLabel} Utilization`}
-          label={resourceType === 'millicores'
-            ? `${formattedUsed} / ${total}`
-            : `${displayUsed} ${displayUnit} / ${totalFormatted.value} ${totalFormatted.unit}`
-          }
-          variant={getVariant()}
-        />
-      </FlexItem>
-    </Flex>
-  );
-};
-
-const PodResourceBar: React.FC<{
-  requests?: { cpu?: string, memory?: string },
-  limits?: { cpu?: string, memory?: string },
-  type: 'cpu' | 'memory'
-}> = ({ requests, limits, type }) => {
-  const parseQuantity = (quantity?: string) => {
-    if (!quantity) return 0;
-    if (type === 'cpu') {
-      // Convert to millicores
-      const match = quantity.match(/^(\d+)([m])?$/);
-      if (match) {
-        const [, value, suffix] = match;
-        return suffix === 'm' ? parseFloat(value) : parseFloat(value) * 1000;
-      }
-      return parseFloat(quantity) * 1000;
-    } else {
-      // Convert to bytes
-      const units: {[key: string]: number} = {
-        'Ki': 1024,
-        'Mi': 1024 * 1024,
-        'Gi': 1024 * 1024 * 1024,
-        'Ti': 1024 * 1024 * 1024 * 1024
-      };
-      const match = quantity.match(/^(\d+)([KMGT]i)?$/);
-      if (match) {
-        const [, value, unit] = match;
-        return unit ? parseFloat(value) * units[unit] : parseFloat(value);
-      }
-      return parseFloat(quantity);
-    }
-  };
-
-  const requestValue = parseQuantity(requests?.[type]);
-  const limitValue = parseQuantity(limits?.[type]);
-
-  // Ensure total width is 100px
-  const totalWidth = 100;
-  const requestWidth = limitValue > 0 ? (requestValue / limitValue) * 100 : 0;
-
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      width: `${totalWidth}px`,
-      height: '10px',
-      backgroundColor: '#f0f0f0',
-      borderRadius: '5px',
-      overflow: 'hidden',
-      position: 'relative'
-    }}>
-      {limitValue > 0 && (
+    <div style={{ width: '100%' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '0.25rem'
+      }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
+          {usedCPUs.toFixed(2)} / {totalCPUs.toFixed(2)} cores
+        </span>
+      </div>
+      <div style={{
+        width: '100%',
+        height: '12px',
+        backgroundColor: '#F0F0F0',
+        borderRadius: '2px',
+        overflow: 'hidden',
+        position: 'relative',
+        border: '1px solid #D1D1D1'
+      }}>
         <div
-          title={`Limit: ${limits?.[type] || '0'}`}
           style={{
-            width: '100%',
+            width: `${percentageUsed}%`,
             height: '100%',
-            backgroundColor: '#c6c6c6',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            zIndex: 1
+            backgroundColor: barColor,
+            transition: 'width 0.3s ease, background-color 0.3s ease'
           }}
-        />
-      )}
-      {requestValue > 0 && (
-        <div
-          title={`Request: ${requests?.[type] || '0'}`}
-          style={{
-            width: `${requestWidth}%`,
-            height: '100%',
-            backgroundColor: type === 'cpu' ? '#3E8635' : '#2B9AF3',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            zIndex: 2
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
-const PodBox: React.FC<{ pod: PodType }> = ({ pod }) => {
-  // Aggregate resources from all containers
-  const aggregateRequests = pod.spec.containers.reduce((acc, container) => {
-    const containerCpu = container.resources?.requests?.cpu || '0';
-    const containerMemory = container.resources?.requests?.memory || '0';
-
-    acc.cpu = (acc.cpu || 0) + parseResourceQuantity(containerCpu, 'cpu');
-    acc.memory = (acc.memory || 0) + parseResourceQuantity(containerMemory, 'memory');
-
-    return acc;
-  }, { cpu: 0, memory: 0 });
-
-  const aggregateLimits = pod.spec.containers.reduce((acc, container) => {
-    const containerCpu = container.resources?.limits?.cpu || '0';
-    const containerMemory = container.resources?.limits?.memory || '0';
-
-    acc.cpu = (acc.cpu || 0) + parseResourceQuantity(containerCpu, 'cpu');
-    acc.memory = (acc.memory || 0) + parseResourceQuantity(containerMemory, 'memory');
-
-    return acc;
-  }, { cpu: 0, memory: 0 });
-
-  const podTooltipContent = (
-    <div style={{ whiteSpace: 'pre-line' }}>
-      <strong>Name:</strong> {pod.metadata.name}
-      <br />
-      <strong>Namespace:</strong> {pod.metadata.namespace}
-      <br />
-      <strong>Phase:</strong> {pod.status?.phase}
-      <br />
-      <strong>CPU Request:</strong> {(aggregateRequests.cpu / 1000).toFixed(2)} cores
-      <br />
-      <strong>CPU Limit:</strong> {(aggregateLimits.cpu / 1000).toFixed(2)} cores
-      <br />
-      <strong>Memory Request:</strong> {formatMemory(aggregateRequests.memory).value} {formatMemory(aggregateRequests.memory).unit}
-      <br />
-      <strong>Memory Limit:</strong> {formatMemory(aggregateLimits.memory).value} {formatMemory(aggregateLimits.memory).unit}
-    </div>
-  );
-
-  return (
-    <Tooltip content={podTooltipContent}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          padding: '4px',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          cursor: 'help',
-          width: '120px',
-          margin: '2px'
-        }}
-      >
-        <div style={{
-          fontSize: '0.6rem',
-          color: '#666',
-          textAlign: 'center',
-          width: '100%',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>
-          {pod.metadata.name}
-        </div>
-        <PodResourceBar
-          requests={{ cpu: `${aggregateRequests.cpu}m`, memory: `${aggregateRequests.memory}` }}
-          limits={{ cpu: `${aggregateLimits.cpu}m`, memory: `${aggregateLimits.memory}` }}
-          type="cpu"
-        />
-        <PodResourceBar
-          requests={{ cpu: `${aggregateRequests.cpu}m`, memory: `${aggregateRequests.memory}` }}
-          limits={{ cpu: `${aggregateLimits.cpu}m`, memory: `${aggregateLimits.memory}` }}
-          type="memory"
+          title={`${nodeName}: ${usedCPUs.toFixed(2)} of ${totalCPUs.toFixed(2)} CPUs ${label.toLowerCase()}`}
         />
       </div>
-    </Tooltip>
-  );
-};
-
-const PodsResourceDisplay: React.FC<{ pods: PodType[] }> = ({ pods }) => {
-  return (
-    <div style={{
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '4px',
-      width: '100%',
-      padding: '4px',
-    }}>
-      {pods.map((pod) => (
-        <PodBox key={pod.metadata.uid} pod={pod} />
-      ))}
     </div>
   );
 };
 
-const NodeConditionsDisplay: React.FC<{ node: NodeType }> = ({ node }) => {
-  // Define color mapping for condition statuses
-  const statusColors = {
-    'True': 'green',
-    'False': 'red',
-    'Unknown': 'orange'
+// Single Memory Bar Component
+const SingleMemoryBar: React.FC<{
+  totalMemory: number;
+  usedMemory: number;
+  nodeName: string;
+  label: string;
+  barColor: string;
+}> = ({ totalMemory, usedMemory, nodeName, label, barColor }) => {
+  const percentageUsed = totalMemory > 0 ? Math.min((usedMemory / totalMemory) * 100, 100) : 0;
+  const usedFormatted = formatMemory(usedMemory);
+  const totalFormatted = formatMemory(totalMemory);
+
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '0.25rem'
+      }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
+          {usedFormatted.value} {usedFormatted.unit} / {totalFormatted.value} {totalFormatted.unit}
+        </span>
+      </div>
+      <div style={{
+        width: '100%',
+        height: '12px',
+        backgroundColor: '#F0F0F0',
+        borderRadius: '2px',
+        overflow: 'hidden',
+        position: 'relative',
+        border: '1px solid #D1D1D1'
+      }}>
+        <div
+          style={{
+            width: `${percentageUsed}%`,
+            height: '100%',
+            backgroundColor: barColor,
+            transition: 'width 0.3s ease, background-color 0.3s ease'
+          }}
+          title={`${nodeName}: ${usedFormatted.value} ${usedFormatted.unit} of ${totalFormatted.value} ${totalFormatted.unit} ${label.toLowerCase()}`}
+        />
+      </div>
+    </div>
+  );
+};
+
+// Effective CPU Bar Component (max of requests and limits)
+const EffectiveCPUBar: React.FC<{
+  totalCPUs: number;
+  requestedCPUs: number;
+  limitedCPUs: number;
+  nodeName: string;
+}> = ({ totalCPUs, requestedCPUs, limitedCPUs, nodeName }) => {
+  // Effective CPU is the maximum of requests and limits
+  const effectiveCPUs = Math.max(requestedCPUs, limitedCPUs);
+  const percentageUsed = totalCPUs > 0 ? Math.min((effectiveCPUs / totalCPUs) * 100, 100) : 0;
+
+  // Color based on utilization
+  const getBarColor = () => {
+    if (percentageUsed < 70) return '#3E8635'; // green
+    if (percentageUsed < 90) return '#F0AB00'; // orange/warning
+    return '#C9190B'; // red/danger
   };
 
-  // Key conditions to display
-  const importantConditions = [
-    'Ready',
-    'MemoryPressure',
-    'DiskPressure',
-    'PIDPressure',
-    'NetworkUnavailable'
-  ];
+  return (
+    <SingleCPUBar
+      totalCPUs={totalCPUs}
+      usedCPUs={effectiveCPUs}
+      nodeName={nodeName}
+      label="Effective CPU"
+      barColor={getBarColor()}
+    />
+  );
+};
 
-  // Filter and sort conditions
-  const displayConditions = (node.status?.conditions || [])
-    .filter(condition => importantConditions.includes(condition.type))
-    .sort((a, b) => {
-      // Prioritize 'Ready' condition
-      if (a.type === 'Ready') return -1;
-      if (b.type === 'Ready') return 1;
-      return a.type.localeCompare(b.type);
-    });
+// Effective Memory Bar Component (max of requests and limits)
+const EffectiveMemoryBar: React.FC<{
+  totalMemory: number;
+  requestedMemory: number;
+  limitedMemory: number;
+  nodeName: string;
+}> = ({ totalMemory, requestedMemory, limitedMemory, nodeName }) => {
+  // Effective Memory is the maximum of requests and limits
+  const effectiveMemory = Math.max(requestedMemory, limitedMemory);
+  const percentageUsed = totalMemory > 0 ? Math.min((effectiveMemory / totalMemory) * 100, 100) : 0;
+
+  // Color based on utilization
+  const getBarColor = () => {
+    if (percentageUsed < 70) return '#3E8635'; // green
+    if (percentageUsed < 90) return '#F0AB00'; // orange/warning
+    return '#C9190B'; // red/danger
+  };
+
+  return (
+    <SingleMemoryBar
+      totalMemory={totalMemory}
+      usedMemory={effectiveMemory}
+      nodeName={nodeName}
+      label="Effective Memory"
+      barColor={getBarColor()}
+    />
+  );
+};
+
+// Node Conditions Component
+const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
+  const conditions = node.status?.conditions || [];
+  
+  // Filter for conditions we want to display
+  const displayConditions = conditions.filter(condition => 
+    ['Ready', 'MemoryPressure', 'DiskPressure', 'PIDPressure'].includes(condition.type)
+  );
+
+  if (displayConditions.length === 0) {
+    return null;
+  }
+
+  const getConditionColor = (type: string, status: string) => {
+    // For Ready: True is good (green), False is bad (red)
+    // For pressure conditions: True is bad (red), False is good (green)
+    if (type === 'Ready') {
+      return status === 'True' ? 'green' : 'red';
+    }
+    return status === 'True' ? 'red' : 'green';
+  };
+
+  const getConditionLabel = (type: string) => {
+    const labels: { [key: string]: string } = {
+      'Ready': 'Ready',
+      'MemoryPressure': 'Mem',
+      'DiskPressure': 'Disk',
+      'PIDPressure': 'PID'
+    };
+    return labels[type] || type;
+  };
+
+  // Sort conditions: Ready first, then others
+  const sortedConditions = [...displayConditions].sort((a, b) => {
+    if (a.type === 'Ready') return -1;
+    if (b.type === 'Ready') return 1;
+    return a.type.localeCompare(b.type);
+  });
 
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
       gap: '0.5rem',
-      flexWrap: 'wrap'
+      marginLeft: 'auto'
     }}>
-      {displayConditions.map(condition => (
-        <div
+      {sortedConditions.map(condition => (
+        <Label
           key={condition.type}
-          title={condition.message || condition.reason}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}
+          color={getConditionColor(condition.type, condition.status)}
+          style={{ fontSize: '0.7rem' }}
+          title={condition.message || condition.reason || `${condition.type}: ${condition.status}`}
         >
-          <div
-            style={{
-              width: '10px',
-              height: '10px',
-              borderRadius: '50%',
-              backgroundColor: statusColors[condition.status] || 'gray'
-            }}
-          />
-          <span style={{
-            fontSize: '0.7rem',
-            color: statusColors[condition.status] || 'gray'
-          }}>
-            {condition.type}
-          </span>
-        </div>
+          {getConditionLabel(condition.type)}
+        </Label>
       ))}
     </div>
   );
 };
 
-const NodeResourceDisplay: React.FC<{ node: NodeType }> = ({ node }) => {
-  const [pods] = useK8sWatchResource<PodType[]>({
-    kind: 'Pod',
-    isList: true,
-    namespaced: false,
+// Calculate effective CPU for a pod (max of requests and limits across all containers)
+const calculatePodEffectiveCPU = (pod: PodType): number => {
+  let totalRequests = 0;
+  let totalLimits = 0;
+
+  pod.spec.containers.forEach(container => {
+    const cpuRequest = container.resources?.requests?.cpu || '0';
+    const cpuLimit = container.resources?.limits?.cpu || '0';
+    totalRequests += parseCPUQuantity(cpuRequest);
+    totalLimits += parseCPUQuantity(cpuLimit);
   });
 
-  const filteredPods = useMemo(() => {
-    if (!pods || !Array.isArray(pods) || !node?.metadata?.name) return [];
-    return (pods || []).filter((pod): pod is PodType =>
-      isValidPod(pod) &&
-      pod.spec?.nodeName === node.metadata.name &&
-      pod.status?.phase !== 'Succeeded' &&
-      pod.status?.phase !== 'Failed'
-    );
-  }, [pods, node?.metadata?.name]);
+  return Math.max(totalRequests, totalLimits);
+};
 
-  // Removed unused podsByNamespace
+// Calculate effective memory for a pod (max of requests and limits across all containers)
+const calculatePodEffectiveMemory = (pod: PodType): number => {
+  let totalRequests = 0;
+  let totalLimits = 0;
 
-  const podResources = useMemo(() => {
-    return filteredPods.reduce((acc, pod) => {
-      pod.spec.containers.forEach(container => {
-        if (container.resources?.requests) {
-          acc.cpuRequests += parseResourceQuantity(container.resources.requests.cpu || '0', 'cpu');
-          acc.memoryRequests += parseResourceQuantity(container.resources.requests.memory || '0', 'memory');
-        }
-      });
-      return acc;
-    }, { cpuRequests: 0, memoryRequests: 0 });
-  }, [filteredPods]);
+  pod.spec.containers.forEach(container => {
+    const memoryRequest = container.resources?.requests?.memory || '0';
+    const memoryLimit = container.resources?.limits?.memory || '0';
+    totalRequests += parseMemoryQuantity(memoryRequest);
+    totalLimits += parseMemoryQuantity(memoryLimit);
+  });
+
+  return Math.max(totalRequests, totalLimits);
+};
+
+// Pod Box Component - small box representing a pod
+const PodBox: React.FC<{ pod: PodType; width: number }> = ({ pod, width }) => {
+  const getPhaseColor = (phase: string) => {
+    switch (phase) {
+      case 'Running':
+        return '#3E8635'; // green
+      case 'Pending':
+        return '#F0AB00'; // orange
+      case 'Succeeded':
+        return '#06C'; // blue
+      case 'Failed':
+        return '#C9190B'; // red
+      default:
+        return '#6A6E73'; // gray
+    }
+  };
+
+  const effectiveCPU = calculatePodEffectiveCPU(pod);
+  const effectiveMemory = calculatePodEffectiveMemory(pod);
+  const memoryFormatted = formatMemory(effectiveMemory);
+
+  const podTooltip = (
+    <div style={{ whiteSpace: 'pre-line', fontSize: '0.875rem' }}>
+      <strong>Name:</strong> {pod.metadata.name}
+      <br />
+      <strong>Namespace:</strong> {pod.metadata.namespace}
+      <br />
+      <strong>Phase:</strong> {pod.status.phase}
+      <br />
+      <strong>Effective CPU:</strong> {effectiveCPU.toFixed(2)} cores
+      <br />
+      <strong>Effective Memory:</strong> {memoryFormatted.value} {memoryFormatted.unit}
+    </div>
+  );
 
   return (
-    <Flex>
-      <FlexItem style={{ width: '70%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <ResourceProgress
-          total={node.status?.capacity?.cpu || '0'}
-          used={podResources.cpuRequests}
-          label="CPU Usage"
-          resourceType="millicores"
-        />
-        <ResourceProgress
-          total={node.status?.capacity?.memory || '0'}
-          used={podResources.memoryRequests}
-          label="Memory Usage"
-          resourceType="bytes"
-        />
-      </FlexItem>
-      <FlexItem>
-        <Flex direction={{ default: 'column' }}>
-          <FlexItem>
-            <Label color="blue">Pods: {filteredPods.length}</Label>
-          </FlexItem>
-          <FlexItem>
-            <Label color="green">
-              CPU Requests: {(podResources.cpuRequests / 1000).toFixed(2)} cores
-            </Label>
-          </FlexItem>
-          <FlexItem>
-            <Label color="orange">
-              Memory Requests: {formatMemory(podResources.memoryRequests, node.status?.capacity?.memory).value} {formatMemory(podResources.memoryRequests, node.status?.capacity?.memory).unit}
-            </Label>
-          </FlexItem>
-        </Flex>
-      </FlexItem>
-      <FlexItem>
-        <PodsResourceDisplay pods={filteredPods} />
-      </FlexItem>
-    </Flex>
+    <Tooltip content={podTooltip}>
+      <div
+        style={{
+          width: `${width}px`,
+          minWidth: '24px',
+          height: '24px',
+          backgroundColor: getPhaseColor(pod.status.phase),
+          borderRadius: '4px',
+          border: '1px solid #D1D1D1',
+          cursor: 'help',
+          flexShrink: 0
+        }}
+        title={`${pod.metadata.namespace}/${pod.metadata.name}`}
+      />
+    </Tooltip>
   );
 };
 
-const isValidPod = (pod: any): pod is PodType => {
+// Pods Display Component - shows all pods for a node
+const PodsDisplay: React.FC<{ pods: PodType[] }> = ({ pods }) => {
+  if (pods.length === 0) {
+    return null;
+  }
+
+  // Calculate effective CPU and memory for each pod
+  const podsWithResources = pods.map(pod => ({
+    pod,
+    effectiveCPU: calculatePodEffectiveCPU(pod),
+    effectiveMemory: calculatePodEffectiveMemory(pod)
+  }));
+
+  // Find max values to normalize
+  const maxEffectiveCPU = Math.max(...podsWithResources.map(p => p.effectiveCPU), 1);
+  const maxEffectiveMemory = Math.max(...podsWithResources.map(p => p.effectiveMemory), 1);
+
+  // Calculate combined resource score (normalized average of CPU and memory)
+  const podsWithScore = podsWithResources.map(({ pod, effectiveCPU, effectiveMemory }) => {
+    // Normalize both to 0-1 range
+    const normalizedCPU = maxEffectiveCPU > 0 ? effectiveCPU / maxEffectiveCPU : 0;
+    const normalizedMemory = maxEffectiveMemory > 0 ? effectiveMemory / maxEffectiveMemory : 0;
+    
+    // Combined score (average of normalized CPU and memory)
+    const combinedScore = (normalizedCPU + normalizedMemory) / 2;
+    
+    return { pod, effectiveCPU, effectiveMemory, combinedScore };
+  });
+
+  // Sort by combined score (descending)
+  podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
+  
+  // Base width and max width for pod boxes
+  const minWidth = 24;
+  const maxWidth = 120;
+
   return (
-    pod &&
-    typeof pod === 'object' &&
-    pod.spec &&
-    pod.spec.containers && Array.isArray(pod.spec.containers) &&
-    typeof pod.spec.nodeName === 'string' &&
-    pod.metadata &&
-    typeof pod.metadata.name === 'string' &&
-    typeof pod.metadata.namespace === 'string' &&
-    typeof pod.metadata.uid === 'string' &&
-    pod.status &&
-    typeof pod.status.phase === 'string' &&
-    pod.spec.containers.length > 0 &&
-    !['Succeeded', 'Failed'].includes(pod.status.phase)
+    <div style={{
+      marginTop: '0.75rem',
+      paddingTop: '0.75rem',
+      borderTop: '1px solid #D1D1D1'
+    }}>
+      <div style={{
+        fontSize: '0.7rem',
+        fontWeight: 500,
+        marginBottom: '0.5rem',
+        color: '#6A6E73'
+      }}>
+        Pods ({pods.length})
+      </div>
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.25rem'
+      }}>
+        {podsWithScore.map(({ pod, combinedScore }) => {
+          // Calculate width proportionally based on combined score (min 24px, max 120px)
+          const width = minWidth + combinedScore * (maxWidth - minWidth);
+
+          return (
+            <PodBox key={pod.metadata.uid} pod={pod} width={width} />
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
-const NodeCard: React.FC<{ node: NodeType & { _key?: string } }> = ({ node }) => {
+const NodeCard: React.FC<{ 
+  node: NodeType & { _key?: string };
+  requestedCPUs: number;
+  limitedCPUs: number;
+  requestedMemory: number;
+  limitedMemory: number;
+  pods: PodType[];
+}> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods }) => {
+  const totalCPUs = parseCPUQuantity(node.status?.capacity?.cpu || '0');
+  const totalMemory = parseMemoryQuantity(node.status?.capacity?.memory || '0');
+
   return (
     <Card
       key={node._key || node.metadata.uid}
       style={{
         width: '100%',
-        margin: '0 0 0.5rem 0',
+        margin: '0 0 1rem 0',
         padding: 0,
         boxSizing: 'border-box'
       }}
@@ -519,23 +515,41 @@ const NodeCard: React.FC<{ node: NodeType & { _key?: string } }> = ({ node }) =>
       <CardTitle
         style={{
           width: '100%',
-          padding: '0.25rem 1rem',
+          padding: '1rem',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          borderBottom: '1px solid #D1D1D1'
         }}
       >
-        <span style={{ fontWeight: 'bold' }}>{node.metadata.name}</span>
-        <NodeConditionsDisplay node={node} />
+        <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>
+          {node.metadata.name}
+        </span>
+        <NodeConditions node={node} />
       </CardTitle>
       <CardBody
         style={{
           width: '100%',
-          padding: '0.5rem 1rem',
-          boxSizing: 'border-box'
+          padding: '1rem',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem'
         }}
       >
-        <NodeResourceDisplay node={node} />
+        <EffectiveCPUBar
+          totalCPUs={totalCPUs}
+          requestedCPUs={requestedCPUs}
+          limitedCPUs={limitedCPUs}
+          nodeName={node.metadata.name}
+        />
+        <EffectiveMemoryBar
+          totalMemory={totalMemory}
+          requestedMemory={requestedMemory}
+          limitedMemory={limitedMemory}
+          nodeName={node.metadata.name}
+        />
+        <PodsDisplay pods={pods} />
       </CardBody>
     </Card>
   );
@@ -556,9 +570,108 @@ const isValidNode = (node: any): node is NodeType => {
   );
 };
 
+const isValidPod = (pod: any): pod is PodType => {
+  return (
+    pod &&
+    typeof pod === 'object' &&
+    pod.spec &&
+    pod.spec.containers && Array.isArray(pod.spec.containers) &&
+    pod.metadata &&
+    typeof pod.metadata.name === 'string' &&
+    typeof pod.metadata.uid === 'string' &&
+    typeof pod.metadata.namespace === 'string' &&
+    pod.status &&
+    typeof pod.status.phase === 'string' &&
+    pod.spec.containers.length > 0 &&
+    !['Succeeded', 'Failed'].includes(pod.status.phase)
+  );
+};
+
+// Get scheduling failure reason from pod conditions
+const getSchedulingFailureReason = (pod: PodType): string | null => {
+  if (!pod.status?.conditions) return null;
+
+  // Look for PodScheduled condition with status False
+  const podScheduledCondition = pod.status.conditions.find(
+    condition => condition.type === 'PodScheduled' && condition.status === 'False'
+  );
+
+  if (podScheduledCondition) {
+    return podScheduledCondition.reason || podScheduledCondition.message || 'Unknown reason';
+  }
+
+  return null;
+};
+
+// Scheduling Pressure Component
+const SchedulingPressure: React.FC<{ pods: PodType[] }> = ({ pods }) => {
+  const unscheduledPods = useMemo(() => {
+    return pods.filter(pod => 
+      isValidPod(pod) &&
+      pod.status.phase === 'Pending' &&
+      !pod.spec.nodeName
+    );
+  }, [pods]);
+
+  const podsWithReasons = useMemo(() => {
+    return unscheduledPods.map(pod => ({
+      name: pod.metadata.name,
+      namespace: pod.metadata.namespace,
+      reason: getSchedulingFailureReason(pod) || 'No reason available'
+    }));
+  }, [unscheduledPods]);
+
+  if (unscheduledPods.length === 0) {
+    return (
+      <Card style={{ marginBottom: '1rem' }}>
+        <CardBody>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Label color="green">Scheduling Pressure: None</Label>
+            <span style={{ fontSize: '0.875rem', color: '#6A6E73' }}>
+              All pods are scheduled
+            </span>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  return (
+    <Card style={{ marginBottom: '1rem' }}>
+      <CardTitle style={{ padding: '1rem', borderBottom: '1px solid #D1D1D1' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Label color="red">Scheduling Pressure: {unscheduledPods.length} pod{unscheduledPods.length !== 1 ? 's' : ''} unscheduled</Label>
+        </div>
+      </CardTitle>
+      <CardBody style={{ padding: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {podsWithReasons.map((pod, index) => (
+            <Alert
+              key={`${pod.namespace}-${pod.name}-${index}`}
+              variant="warning"
+              title={`${pod.namespace}/${pod.name}`}
+              style={{ marginBottom: 0 }}
+            >
+              <div style={{ fontSize: '0.875rem' }}>
+                <strong>Reason:</strong> {pod.reason}
+              </div>
+            </Alert>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
+  );
+};
+
 const SchedulerPage: React.FC = () => {
   const [nodes, nodesLoaded, nodesError] = useK8sWatchResource<NodeType[]>({
     kind: 'Node',
+    isList: true,
+    namespaced: false,
+  });
+
+  const [pods] = useK8sWatchResource<PodType[]>({
+    kind: 'Pod',
     isList: true,
     namespaced: false,
   });
@@ -571,6 +684,70 @@ const SchedulerPage: React.FC = () => {
     }));
   }, [nodes]);
 
+  // Calculate CPU and Memory requests and limits per node
+  const nodeResourceUsage = useMemo(() => {
+    const cpuRequests: { [nodeName: string]: number } = {};
+    const cpuLimits: { [nodeName: string]: number } = {};
+    const memoryRequests: { [nodeName: string]: number } = {};
+    const memoryLimits: { [nodeName: string]: number } = {};
+
+    if (!pods || !Array.isArray(pods)) {
+      return { cpuRequests, cpuLimits, memoryRequests, memoryLimits };
+    }
+
+    pods.filter(isValidPod).forEach(pod => {
+      const nodeName = pod.spec.nodeName;
+      if (!nodeName) return;
+
+      // Sum CPU and Memory requests and limits from all containers in the pod
+      const podCPURequest = pod.spec.containers.reduce((sum, container) => {
+        const cpuRequest = container.resources?.requests?.cpu || '0';
+        return sum + parseCPUQuantity(cpuRequest);
+      }, 0);
+
+      const podCPULimit = pod.spec.containers.reduce((sum, container) => {
+        const cpuLimit = container.resources?.limits?.cpu || '0';
+        return sum + parseCPUQuantity(cpuLimit);
+      }, 0);
+
+      const podMemoryRequest = pod.spec.containers.reduce((sum, container) => {
+        const memoryRequest = container.resources?.requests?.memory || '0';
+        return sum + parseMemoryQuantity(memoryRequest);
+      }, 0);
+
+      const podMemoryLimit = pod.spec.containers.reduce((sum, container) => {
+        const memoryLimit = container.resources?.limits?.memory || '0';
+        return sum + parseMemoryQuantity(memoryLimit);
+      }, 0);
+
+      cpuRequests[nodeName] = (cpuRequests[nodeName] || 0) + podCPURequest;
+      cpuLimits[nodeName] = (cpuLimits[nodeName] || 0) + podCPULimit;
+      memoryRequests[nodeName] = (memoryRequests[nodeName] || 0) + podMemoryRequest;
+      memoryLimits[nodeName] = (memoryLimits[nodeName] || 0) + podMemoryLimit;
+    });
+
+    return { cpuRequests, cpuLimits, memoryRequests, memoryLimits };
+  }, [pods]);
+
+  // Group pods by node name
+  const podsByNode = useMemo(() => {
+    const grouped: { [nodeName: string]: PodType[] } = {};
+
+    if (!pods || !Array.isArray(pods)) return grouped;
+
+    pods.filter(isValidPod).forEach(pod => {
+      const nodeName = pod.spec.nodeName;
+      if (!nodeName) return;
+
+      if (!grouped[nodeName]) {
+        grouped[nodeName] = [];
+      }
+      grouped[nodeName].push(pod);
+    });
+
+    return grouped;
+  }, [pods]);
+
   if (nodesError) {
     console.error('Error loading nodes', nodesError);
     return <div>Error loading nodes</div>;
@@ -579,7 +756,7 @@ const SchedulerPage: React.FC = () => {
   return (
     <div style={{
       width: '100%',
-      height: 'calc(100vh - 64px)', // More precise header subtraction
+      height: 'calc(100vh - 64px)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden'
@@ -610,9 +787,20 @@ const SchedulerPage: React.FC = () => {
           {!nodesLoaded ? (
             <Spinner />
           ) : (
-            validNodes.map((node) => (
-              <NodeCard key={node._key} node={node} />
-            ))
+            <>
+              <SchedulingPressure pods={pods || []} />
+              {validNodes.map((node) => (
+                <NodeCard
+                  key={node._key}
+                  node={node}
+                  requestedCPUs={nodeResourceUsage.cpuRequests[node.metadata.name] || 0}
+                  limitedCPUs={nodeResourceUsage.cpuLimits[node.metadata.name] || 0}
+                  requestedMemory={nodeResourceUsage.memoryRequests[node.metadata.name] || 0}
+                  limitedMemory={nodeResourceUsage.memoryLimits[node.metadata.name] || 0}
+                  pods={podsByNode[node.metadata.name] || []}
+                />
+              ))}
+            </>
           )}
         </Suspense>
       </div>
