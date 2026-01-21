@@ -89,7 +89,7 @@ const parseCPUQuantity = (quantity: string): number => {
     // If it has 'm' suffix, it's millicores, convert to cores
     return suffix === 'm' ? parseFloat(value) / 1000 : parseFloat(value);
   }
-  
+
   // If no match, try to parse as float
   return parseFloat(quantity) || 0;
 };
@@ -121,16 +121,16 @@ const parseMemoryQuantity = (quantity: string): number => {
 // Format memory bytes to human-readable string
 const formatMemory = (bytes: number): { value: string, unit: string } => {
   if (bytes === 0) return { value: '0', unit: 'B' };
-  
+
   const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
   let size = bytes;
   let unitIndex = 0;
-  
+
   while (size >= 1024 && unitIndex < units.length - 1) {
     size /= 1024;
     unitIndex++;
   }
-  
+
   return {
     value: size.toFixed(2),
     unit: units[unitIndex]
@@ -346,7 +346,7 @@ const GenericResourceBar: React.FC<{
 const getNodeRoles = (node: NodeType): string[] => {
   const roles: string[] = [];
   const labels = node.metadata?.labels || {};
-  
+
   Object.keys(labels).forEach(key => {
     if (key.startsWith('node-role.kubernetes.io/')) {
       const role = key.replace('node-role.kubernetes.io/', '');
@@ -356,18 +356,18 @@ const getNodeRoles = (node: NodeType): string[] => {
       }
     }
   });
-  
+
   return roles.sort();
 };
 
 // Node Roles Component
 const NodeRoles: React.FC<{ node: NodeType }> = ({ node }) => {
   const roles = getNodeRoles(node);
-  
+
   if (roles.length === 0) {
     return null;
   }
-  
+
   return (
     <div style={{
       display: 'flex',
@@ -391,9 +391,9 @@ const NodeRoles: React.FC<{ node: NodeType }> = ({ node }) => {
 // Node Conditions Component
 const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
   const conditions = node.status?.conditions || [];
-  
+
   // Filter for conditions we want to display
-  const displayConditions = conditions.filter(condition => 
+  const displayConditions = conditions.filter(condition =>
     ['Ready', 'MemoryPressure', 'DiskPressure', 'PIDPressure'].includes(condition.type)
   );
 
@@ -575,16 +575,16 @@ const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean; title: string
     // Normalize both to 0-1 range
     const normalizedCPU = maxEffectiveCPU > 0 ? effectiveCPU / maxEffectiveCPU : 0;
     const normalizedMemory = maxEffectiveMemory > 0 ? effectiveMemory / maxEffectiveMemory : 0;
-    
+
     // Combined score (average of normalized CPU and memory)
     const combinedScore = (normalizedCPU + normalizedMemory) / 2;
-    
+
     return { pod, effectiveCPU, effectiveMemory, combinedScore };
   });
 
   // Sort by combined score (descending)
   podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
-  
+
   // Base width and max width for pod boxes - larger when showing names
   const minWidth = showNames ? 48 : 24;
   const maxWidth = showNames ? 240 : 120;
@@ -624,13 +624,13 @@ const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean; title: string
 // Parse a generic resource quantity (handles numbers, memory-like units, etc.)
 const parseGenericResource = (quantity: string): number => {
   if (!quantity) return 0;
-  
+
   // Try parsing as a number first (for things like pods count)
   const numericValue = parseFloat(quantity);
   if (!isNaN(numericValue) && !quantity.match(/[KMGTPE]i?$/)) {
     return numericValue;
   }
-  
+
   // Try parsing as memory (for storage-like resources)
   return parseMemoryQuantity(quantity);
 };
@@ -641,13 +641,13 @@ const formatGenericResource = (value: number, resourceType: string): string => {
   if (resourceType === 'pods' || (!isNaN(value) && value === Math.floor(value))) {
     return value.toString();
   }
-  
+
   // For memory-like resources, format as memory
   const formatted = formatMemory(value);
   return `${formatted.value} ${formatted.unit}`;
 };
 
-const NodeCard: React.FC<{ 
+const NodeCard: React.FC<{
   node: NodeType & { _key?: string };
   requestedCPUs: number;
   limitedCPUs: number;
@@ -731,15 +731,15 @@ const NodeCard: React.FC<{
           .map(resource => {
             const capacity = node.status?.capacity?.[resource];
             if (!capacity) return null;
-            
+
             const total = parseGenericResource(capacity);
-            
+
             // Get usage from resourceUsage
             const resourceData = resourceUsage[resource];
             const requested = resourceData?.requests?.[node.metadata.name] || 0;
             const limited = resourceData?.limits?.[node.metadata.name] || 0;
             const used = Math.max(requested, limited);
-            
+
             return (
               <GenericResourceBar
                 key={resource}
@@ -755,6 +755,162 @@ const NodeCard: React.FC<{
         <PodsDisplay pods={systemPods} showNames={showPodNames} title="System Pods" />
       </CardBody>
     </Card>
+  );
+};
+
+// Compact Node Card Component - shows node as a large square
+const CompactNodeCard: React.FC<{
+  node: NodeType & { _key?: string };
+  requestedCPUs: number;
+  limitedCPUs: number;
+  requestedMemory: number;
+  limitedMemory: number;
+  pods: PodType[];
+  showPodNames: boolean;
+}> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods, showPodNames }) => {
+  const totalCPUs = parseCPUQuantity(node.status?.capacity?.cpu || '0');
+  const totalMemory = parseMemoryQuantity(node.status?.capacity?.memory || '0');
+
+  // Calculate effective CPU and memory usage
+  const effectiveCPUs = Math.max(requestedCPUs, limitedCPUs);
+  const effectiveMemory = Math.max(requestedMemory, limitedMemory);
+
+  const cpuPercentage = totalCPUs > 0 ? Math.min((effectiveCPUs / totalCPUs) * 100, 100) : 0;
+  const memoryPercentage = totalMemory > 0 ? Math.min((effectiveMemory / totalMemory) * 100, 100) : 0;
+
+  const roles = getNodeRoles(node);
+
+  // Calculate effective CPU and memory for each pod for sizing
+  const podsWithResources = pods.map(pod => ({
+    pod,
+    effectiveCPU: calculatePodEffectiveCPU(pod),
+    effectiveMemory: calculatePodEffectiveMemory(pod)
+  }));
+
+  const maxEffectiveCPU = Math.max(...podsWithResources.map(p => p.effectiveCPU), 1);
+  const maxEffectiveMemory = Math.max(...podsWithResources.map(p => p.effectiveMemory), 1);
+
+  const podsWithScore = podsWithResources.map(({ pod, effectiveCPU, effectiveMemory }) => {
+    const normalizedCPU = maxEffectiveCPU > 0 ? effectiveCPU / maxEffectiveCPU : 0;
+    const normalizedMemory = maxEffectiveMemory > 0 ? effectiveMemory / maxEffectiveMemory : 0;
+    const combinedScore = (normalizedCPU + normalizedMemory) / 2;
+    return { pod, effectiveCPU, effectiveMemory, combinedScore };
+  });
+
+  podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
+
+  const minWidth = showPodNames ? 24 : 12;
+  const maxWidth = showPodNames ? 48 : 24;
+
+  return (
+    <div
+      style={{
+        width: '220px',
+        minHeight: '220px',
+        backgroundColor: '#3d3d3d',
+        borderRadius: '8px',
+        border: '1px solid #5a5a5a',
+        cursor: 'default',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '1rem',
+        boxSizing: 'border-box',
+        position: 'relative',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'scale(1.05)';
+        e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.3)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+        {/* Node name */}
+        <div style={{
+          color: '#ffffff',
+          fontSize: '0.9rem',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          marginBottom: '0.5rem',
+          textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          width: '100%'
+        }}>
+          {node.metadata.name}
+        </div>
+
+        {/* Roles */}
+        {roles.length > 0 && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.25rem',
+            justifyContent: 'center',
+            marginBottom: '0.5rem'
+          }}>
+            {roles.map(role => (
+              <span
+                key={role}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                  color: '#ffffff',
+                  fontSize: '0.65rem',
+                  padding: '0.125rem 0.25rem',
+                  borderRadius: '3px',
+                  fontWeight: 500,
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                {role}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Resource usage */}
+        <div style={{
+          color: '#ffffff',
+          fontSize: '0.75rem',
+          textAlign: 'center',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+          marginBottom: '0.5rem'
+        }}>
+          <div style={{ marginBottom: '0.25rem' }}>
+            <strong>CPU:</strong> {cpuPercentage.toFixed(1)}%
+          </div>
+          <div style={{ marginBottom: '0.25rem' }}>
+            <strong>Memory:</strong> {memoryPercentage.toFixed(1)}%
+          </div>
+          <div style={{ marginTop: '0.25rem', fontSize: '0.7rem' }}>
+            Pods: {pods.length}
+          </div>
+        </div>
+
+        {/* Pod blocks */}
+        {pods.length > 0 && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.15rem',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            marginTop: '0.5rem'
+          }}>
+            {podsWithScore.map(({ pod, combinedScore }) => {
+              const width = minWidth + combinedScore * (maxWidth - minWidth);
+              return (
+                <PodBox key={pod.metadata.uid} pod={pod} width={width} showName={showPodNames} />
+              );
+            })}
+          </div>
+        )}
+    </div>
   );
 };
 
@@ -871,7 +1027,7 @@ const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boo
 // Scheduling Pressure Component
 const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean }> = ({ pods, showNames }) => {
   const unscheduledPods = useMemo(() => {
-    return pods.filter(pod => 
+    return pods.filter(pod =>
       isValidPod(pod) &&
       pod.status.phase === 'Pending' &&
       !pod.spec.nodeName
@@ -909,16 +1065,16 @@ const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean }> = ({
     // Normalize both to 0-1 range
     const normalizedCPU = maxEffectiveCPU > 0 ? effectiveCPU / maxEffectiveCPU : 0;
     const normalizedMemory = maxEffectiveMemory > 0 ? effectiveMemory / maxEffectiveMemory : 0;
-    
+
     // Combined score (average of normalized CPU and memory)
     const combinedScore = (normalizedCPU + normalizedMemory) / 2;
-    
+
     return { pod, effectiveCPU, effectiveMemory, combinedScore };
   });
 
   // Sort by combined score (descending)
   podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
-  
+
   // Base width and max width for pod boxes - larger when showing names
   const minWidth = showNames ? 48 : 24;
   const maxWidth = showNames ? 240 : 120;
@@ -965,7 +1121,7 @@ const ResourceSelector: React.FC<{
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      
+
       // Calculate width based on longest resource name
       // Create a temporary element to measure text width
       const tempElement = document.createElement('span');
@@ -974,7 +1130,7 @@ const ResourceSelector: React.FC<{
       tempElement.style.fontSize = '0.875rem';
       tempElement.style.padding = '0 1rem';
       document.body.appendChild(tempElement);
-      
+
       let maxWidth = 200; // minimum width
       availableResources.forEach(resource => {
         const resourceText = resource.charAt(0).toUpperCase() + resource.slice(1);
@@ -984,9 +1140,9 @@ const ResourceSelector: React.FC<{
         const totalWidth = textWidth + 24 + 16 + 32;
         maxWidth = Math.max(maxWidth, totalWidth);
       });
-      
+
       document.body.removeChild(tempElement);
-      
+
       setDropdownPosition({
         top: rect.bottom + window.scrollY + 4,
         left: rect.left + window.scrollX,
@@ -999,13 +1155,13 @@ const ResourceSelector: React.FC<{
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        buttonRef.current && 
+        buttonRef.current &&
         buttonRef.current.contains(event.target as Node)
       ) {
         return;
       }
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
@@ -1020,8 +1176,8 @@ const ResourceSelector: React.FC<{
   }, [isOpen]);
 
   const selectedCount = selectedResources.size;
-  const buttonText = selectedCount === 0 
-    ? 'Select Resources' 
+  const buttonText = selectedCount === 0
+    ? 'Select Resources'
     : `Resources (${selectedCount})`;
 
   return (
@@ -1189,13 +1345,13 @@ const ProjectSelector: React.FC<{
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        buttonRef.current && 
+        buttonRef.current &&
         buttonRef.current.contains(event.target as Node)
       ) {
         return;
       }
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
@@ -1212,9 +1368,9 @@ const ProjectSelector: React.FC<{
 
   const selectedCount = selectedNamespaces.size;
   const allSelected = selectedCount === availableNamespaces.length && availableNamespaces.length > 0;
-  const buttonText = selectedCount === 0 
-    ? 'All Projects' 
-    : allSelected 
+  const buttonText = selectedCount === 0
+    ? 'All Projects'
+    : allSelected
       ? 'All Projects'
       : `Projects (${selectedCount})`;
 
@@ -1283,7 +1439,7 @@ const ProjectSelector: React.FC<{
             }
           `}</style>
           {/* Search input */}
-          <div style={{ 
+          <div style={{
             padding: '0.5rem',
             borderBottom: '1px solid #5a5a5a',
             backgroundColor: '#3d3d3d'
@@ -1449,6 +1605,9 @@ const SchedulerPage: React.FC = () => {
   // Option to show pod names
   const [showPodNames, setShowPodNames] = useState<boolean>(false);
 
+  // Option to show compact view
+  const [compactView, setCompactView] = useState<boolean>(false);
+
   const validNodes = useMemo(() => {
     if (!nodes || !Array.isArray(nodes)) return [];
     return nodes.filter(isValidNode).map((node, index) => ({
@@ -1461,7 +1620,7 @@ const SchedulerPage: React.FC = () => {
   const availableResources = useMemo(() => {
     const resources = new Set<string>();
     if (!nodes || !Array.isArray(nodes)) return Array.from(resources);
-    
+
     nodes.forEach(node => {
       if (node.status?.capacity) {
         Object.keys(node.status.capacity).forEach(resource => {
@@ -1469,7 +1628,7 @@ const SchedulerPage: React.FC = () => {
         });
       }
     });
-    
+
     // Sort resources: cpu and memory first, then others alphabetically
     const sorted = Array.from(resources).sort((a, b) => {
       if (a === 'cpu') return -1;
@@ -1478,7 +1637,7 @@ const SchedulerPage: React.FC = () => {
       if (b === 'memory') return 1;
       return a.localeCompare(b);
     });
-    
+
     return sorted;
   }, [nodes]);
 
@@ -1633,6 +1792,49 @@ const SchedulerPage: React.FC = () => {
     });
   }, [validNodes, hideEmptyNodes, podsByNode]);
 
+  // Group nodes by their roles for compact view
+  const nodesByRole = useMemo(() => {
+    const groups: { [roleKey: string]: { roles: string[], nodes: (NodeType & { _key?: string })[] } } = {};
+
+    displayNodes.forEach(node => {
+      const roles = getNodeRoles(node);
+      const roleKey = roles.length > 0 ? roles.sort().join(',') : 'no-role';
+
+      if (!groups[roleKey]) {
+        groups[roleKey] = {
+          roles: roles.length > 0 ? roles : [],
+          nodes: []
+        };
+      }
+      groups[roleKey].nodes.push(node);
+    });
+
+    // Sort groups: master first, then workers, then others alphabetically
+    const sortedGroups = Object.entries(groups).sort(([keyA, groupA], [keyB, groupB]) => {
+      const rolesA = groupA.roles;
+      const rolesB = groupB.roles;
+
+      // Check if either group contains 'master' or 'control-plane'
+      const aIsMaster = rolesA.some(r => r === 'master' || r === 'control-plane');
+      const bIsMaster = rolesB.some(r => r === 'master' || r === 'control-plane');
+
+      if (aIsMaster && !bIsMaster) return -1;
+      if (!aIsMaster && bIsMaster) return 1;
+
+      // Check if either group is 'worker'
+      const aIsWorker = rolesA.length === 1 && rolesA[0] === 'worker';
+      const bIsWorker = rolesB.length === 1 && rolesB[0] === 'worker';
+
+      if (aIsWorker && !bIsWorker) return -1;
+      if (!aIsWorker && bIsWorker) return 1;
+
+      // Otherwise sort alphabetically
+      return keyA.localeCompare(keyB);
+    });
+
+    return sortedGroups;
+  }, [displayNodes]);
+
   if (nodesError) {
     console.error('Error loading nodes', nodesError);
     return <div>Error loading nodes</div>;
@@ -1696,6 +1898,12 @@ const SchedulerPage: React.FC = () => {
                 isChecked={showPodNames}
                 onChange={(_, checked) => setShowPodNames(checked)}
               />
+              <Checkbox
+                id="compact-view"
+                label="Compact view"
+                isChecked={compactView}
+                onChange={(_, checked) => setCompactView(checked)}
+              />
             </>
           )}
         </div>
@@ -1716,26 +1924,92 @@ const SchedulerPage: React.FC = () => {
           ) : (
             <>
               <SchedulingPressure pods={filteredPods || []} showNames={showPodNames} />
-              {displayNodes.map((node) => {
-                // Get CPU and Memory usage (for backward compatibility)
-                const cpuData = nodeResourceUsage['cpu'];
-                const memoryData = nodeResourceUsage['memory'];
-                
-                return (
-                  <NodeCard
-                    key={node._key}
-                    node={node}
-                    requestedCPUs={cpuData?.requests?.[node.metadata.name] || 0}
-                    limitedCPUs={cpuData?.limits?.[node.metadata.name] || 0}
-                    requestedMemory={memoryData?.requests?.[node.metadata.name] || 0}
-                    limitedMemory={memoryData?.limits?.[node.metadata.name] || 0}
-                    pods={podsByNode[node.metadata.name] || []}
-                    selectedResources={selectedResources}
-                    resourceUsage={nodeResourceUsage}
-                    showPodNames={showPodNames}
-                  />
-                );
-              })}
+              {compactView ? (
+                <>
+                  {nodesByRole.map(([roleKey, group]) => (
+                    <div key={roleKey} style={{ marginBottom: '2rem', width: '100%' }}>
+                      {/* Role header */}
+                      <div style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 'bold',
+                        marginBottom: '1rem',
+                        paddingBottom: '0.5rem',
+                        borderBottom: '2px solid #D1D1D1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        {group.roles.length > 0 ? (
+                          <>
+                            <span>
+                              {group.roles.map(role => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
+                            </span>
+                            <span style={{ fontSize: '0.9rem', color: '#6A6E73', fontWeight: 'normal' }}>
+                              ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span>No Role</span>
+                            <span style={{ fontSize: '0.9rem', color: '#6A6E73', fontWeight: 'normal' }}>
+                              ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      {/* Nodes grid */}
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '1rem',
+                        justifyContent: 'flex-start',
+                        alignItems: 'flex-start'
+                      }}>
+                        {group.nodes.map((node) => {
+                          const cpuData = nodeResourceUsage['cpu'];
+                          const memoryData = nodeResourceUsage['memory'];
+
+                          return (
+                            <CompactNodeCard
+                              key={node._key}
+                              node={node}
+                              requestedCPUs={cpuData?.requests?.[node.metadata.name] || 0}
+                              limitedCPUs={cpuData?.limits?.[node.metadata.name] || 0}
+                              requestedMemory={memoryData?.requests?.[node.metadata.name] || 0}
+                              limitedMemory={memoryData?.limits?.[node.metadata.name] || 0}
+                              pods={podsByNode[node.metadata.name] || []}
+                              showPodNames={showPodNames}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {displayNodes.map((node) => {
+                    // Get CPU and Memory usage (for backward compatibility)
+                    const cpuData = nodeResourceUsage['cpu'];
+                    const memoryData = nodeResourceUsage['memory'];
+
+                    return (
+                      <NodeCard
+                        key={node._key}
+                        node={node}
+                        requestedCPUs={cpuData?.requests?.[node.metadata.name] || 0}
+                        limitedCPUs={cpuData?.limits?.[node.metadata.name] || 0}
+                        requestedMemory={memoryData?.requests?.[node.metadata.name] || 0}
+                        limitedMemory={memoryData?.limits?.[node.metadata.name] || 0}
+                        pods={podsByNode[node.metadata.name] || []}
+                        selectedResources={selectedResources}
+                        resourceUsage={nodeResourceUsage}
+                        showPodNames={showPodNames}
+                      />
+                    );
+                  })}
+                </>
+              )}
             </>
           )}
         </Suspense>
