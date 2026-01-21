@@ -155,7 +155,7 @@ const SingleCPUBar: React.FC<{
       alignItems: 'center',
         marginBottom: '0.25rem'
       }}>
-        <span style={{ fontSize: '0.7rem', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: '0.7rem' }}>{label}</span>
         <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
           {usedCPUs.toFixed(2)} / {totalCPUs.toFixed(2)} cores
         </span>
@@ -203,7 +203,7 @@ const SingleMemoryBar: React.FC<{
         alignItems: 'center',
         marginBottom: '0.25rem'
       }}>
-        <span style={{ fontSize: '0.7rem', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: '0.7rem' }}>{label}</span>
         <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
           {usedFormatted.value} {usedFormatted.unit} / {totalFormatted.value} {totalFormatted.unit}
         </span>
@@ -314,7 +314,7 @@ const GenericResourceBar: React.FC<{
       alignItems: 'center',
         marginBottom: '0.25rem'
       }}>
-        <span style={{ fontSize: '0.7rem', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: '0.7rem' }}>{label}</span>
         <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
           {formatValue(used)} / {formatValue(total)}
         </span>
@@ -537,7 +537,6 @@ const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ 
           <span style={{
             color: '#ffffff',
             fontSize: '0.65rem',
-            fontWeight: 500,
             textAlign: 'center',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -597,7 +596,6 @@ const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean; title: string
     }}>
       <div style={{
         fontSize: '0.7rem',
-        fontWeight: 500,
         marginBottom: '0.5rem',
         color: '#6A6E73'
       }}>
@@ -700,7 +698,7 @@ const NodeCard: React.FC<{
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>
+          <span style={{ fontSize: '1rem' }}>
             {node.metadata.name}
           </span>
           <NodeRoles node={node} />
@@ -810,13 +808,10 @@ const CompactNodeCard: React.FC<{
   const maxWidth = showPodNames ? 48 : 24;
 
   return (
-    <div
+    <Card
       style={{
         width: '220px',
         minHeight: '220px',
-        backgroundColor: '#3d3d3d',
-        borderRadius: '8px',
-        border: '1px solid #5a5a5a',
         cursor: 'default',
         display: 'flex',
         flexDirection: 'column',
@@ -832,17 +827,15 @@ const CompactNodeCard: React.FC<{
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'scale(1)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.boxShadow = '';
       }}
     >
         {/* Node name */}
         <div style={{
-          color: '#ffffff',
+          color: 'var(--pf-global--Color--100)',
           fontSize: '0.9rem',
-          fontWeight: 'bold',
           textAlign: 'center',
           marginBottom: '0.5rem',
-          textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
@@ -864,13 +857,12 @@ const CompactNodeCard: React.FC<{
               <span
                 key={role}
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--pf-global--BackgroundColor--200)',
+                  color: 'var(--pf-global--Color--100)',
                   fontSize: '0.65rem',
                   padding: '0.125rem 0.25rem',
                   borderRadius: '3px',
-                  fontWeight: 500,
-                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+                  border: '1px solid var(--pf-global--BorderColor--100)'
                 }}
               >
                 {role}
@@ -881,10 +873,9 @@ const CompactNodeCard: React.FC<{
 
         {/* Resource usage */}
         <div style={{
-          color: '#ffffff',
+          color: 'var(--pf-global--Color--100)',
           fontSize: '0.75rem',
           textAlign: 'center',
-          textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
           marginBottom: '0.5rem'
         }}>
           <div style={{ marginBottom: '0.25rem' }}>
@@ -924,7 +915,7 @@ const CompactNodeCard: React.FC<{
             })}
           </div>
         )}
-    </div>
+    </Card>
   );
 };
 
@@ -1022,7 +1013,6 @@ const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boo
           <span style={{
             color: '#ffffff',
             fontSize: '0.65rem',
-            fontWeight: 500,
             textAlign: 'center',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -1230,26 +1220,33 @@ const ResourceSelector: React.FC<{
             maxHeight: '300px',
             overflowY: 'auto',
             overflowX: 'hidden',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)',
+            borderRadius: 'var(--pf-global--BorderRadius--sm)',
             zIndex: 9999,
             padding: 0,
-            border: 'none',
-            backgroundColor: '#3d3d3d'
+            border: '1px solid var(--pf-global--BorderColor--100)',
+            backgroundColor: '#ffffff'
           }}
         >
           <style>{`
+            .pf-theme-dark .resource-dropdown {
+              background-color: #1f1f1f !important;
+            }
+            .pf-theme-dark .resource-dropdown::-webkit-scrollbar-track {
+              background: #1f1f1f;
+            }
             .resource-dropdown::-webkit-scrollbar {
               width: 12px;
             }
             .resource-dropdown::-webkit-scrollbar-track {
-              background: #3d3d3d;
+              background: #ffffff;
             }
             .resource-dropdown::-webkit-scrollbar-thumb {
-              background: #5a5a5a;
+              background: var(--pf-global--BackgroundColor--300);
               border-radius: 6px;
             }
             .resource-dropdown::-webkit-scrollbar-thumb:hover {
-              background: #6a6a6a;
+              background: var(--pf-global--BackgroundColor--400);
             }
           `}</style>
           {availableResources.map(resource => {
@@ -1264,9 +1261,9 @@ const ResourceSelector: React.FC<{
                   alignItems: 'center',
                   width: '100%',
                   boxSizing: 'border-box',
-                  backgroundColor: isSelected ? '#4a4a4a' : 'transparent',
-                  borderBottom: '1px solid #5a5a5a',
-                  color: '#ffffff'
+                  backgroundColor: isSelected ? 'var(--pf-global--active-color--100)' : 'transparent',
+                  borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                  color: 'var(--pf-global--Color--100)'
                 }}
                 onClick={(e) => {
                   // Toggle when clicking anywhere on the row (div, label, or checkbox)
@@ -1276,17 +1273,13 @@ const ResourceSelector: React.FC<{
                   }
                 }}
                 onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#4a4a4a';
-                  } else {
-                    e.currentTarget.style.backgroundColor = '#5a5a5a';
-                  }
+                  e.currentTarget.style.backgroundColor = 'var(--pf-global--BackgroundColor--200)';
                 }}
                 onMouseLeave={(e) => {
                   if (!isSelected) {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   } else {
-                    e.currentTarget.style.backgroundColor = '#4a4a4a';
+                    e.currentTarget.style.backgroundColor = 'var(--pf-global--active-color--100)';
                   }
                 }}
               >
@@ -1310,7 +1303,7 @@ const ResourceSelector: React.FC<{
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    color: '#ffffff'
+                    color: 'var(--pf-global--Color--100)'
                   }}
                   onClick={(e) => {
                     e.preventDefault();
@@ -1424,46 +1417,56 @@ const ProjectSelector: React.FC<{
             maxHeight: '400px',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)',
+            borderRadius: 'var(--pf-global--BorderRadius--sm)',
             zIndex: 9999,
             padding: 0,
-            border: 'none',
-            backgroundColor: '#3d3d3d'
+            border: '1px solid var(--pf-global--BorderColor--100)',
+            backgroundColor: '#ffffff'
           }}
         >
-          <style>{`
+          <style>
+            {`
+            .pf-theme-dark .project-dropdown {
+              background-color: #1f1f1f !important;
+            }
+            .pf-theme-dark .project-dropdown::-webkit-scrollbar-track,
+            .pf-theme-dark .project-dropdown-list::-webkit-scrollbar-track {
+              background: #1f1f1f;
+            }
             .project-dropdown::-webkit-scrollbar {
               width: 12px;
             }
             .project-dropdown::-webkit-scrollbar-track {
-              background: #3d3d3d;
+              background: #ffffff;
             }
             .project-dropdown::-webkit-scrollbar-thumb {
-              background: #5a5a5a;
+              background: var(--pf-global--BackgroundColor--300);
               border-radius: 6px;
             }
             .project-dropdown::-webkit-scrollbar-thumb:hover {
-              background: #6a6a6a;
+              background: var(--pf-global--BackgroundColor--400);
             }
             .project-dropdown-list::-webkit-scrollbar {
               width: 12px;
             }
             .project-dropdown-list::-webkit-scrollbar-track {
-              background: #3d3d3d;
+              background: #ffffff;
             }
             .project-dropdown-list::-webkit-scrollbar-thumb {
-              background: #5a5a5a;
+              background: var(--pf-global--BackgroundColor--300);
               border-radius: 6px;
             }
             .project-dropdown-list::-webkit-scrollbar-thumb:hover {
-              background: #6a6a6a;
+              background: var(--pf-global--BackgroundColor--400);
             }
-          `}</style>
+          `}
+          </style>
           {/* Search input */}
           <div style={{
             padding: '0.5rem',
-            borderBottom: '1px solid #5a5a5a',
-            backgroundColor: '#3d3d3d'
+            borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+            backgroundColor: 'transparent'
           }}>
             <SearchInput
               placeholder="Search projects..."
@@ -1478,20 +1481,20 @@ const ProjectSelector: React.FC<{
             display: 'flex',
             gap: '0.5rem',
             padding: '0.5rem',
-            borderBottom: '1px solid #5a5a5a',
-            backgroundColor: '#3d3d3d'
+            borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+            backgroundColor: 'transparent'
           }}>
             <Button
               variant="link"
               onClick={onSelectAll}
-              style={{ color: '#ffffff', padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
             >
               Select All
             </Button>
             <Button
               variant="link"
               onClick={onClearAll}
-              style={{ color: '#ffffff', padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
             >
               Clear All
             </Button>
@@ -1509,7 +1512,7 @@ const ProjectSelector: React.FC<{
               <div style={{
                 padding: '1rem',
                 textAlign: 'center',
-                color: '#ffffff',
+                color: 'var(--pf-global--Color--100)',
                 fontSize: '0.875rem'
               }}>
                 No projects found
@@ -1527,9 +1530,9 @@ const ProjectSelector: React.FC<{
                       alignItems: 'center',
                       width: '100%',
                       boxSizing: 'border-box',
-                      backgroundColor: isSelected ? '#4a4a4a' : 'transparent',
-                      borderBottom: '1px solid #5a5a5a',
-                      color: '#ffffff'
+                      backgroundColor: isSelected ? 'var(--pf-global--active-color--100)' : 'transparent',
+                      borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                      color: 'var(--pf-global--Color--100)'
                     }}
                     onClick={(e) => {
                       const target = e.target as HTMLElement;
@@ -1538,17 +1541,13 @@ const ProjectSelector: React.FC<{
                       }
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.backgroundColor = '#4a4a4a';
-                      } else {
-                        e.currentTarget.style.backgroundColor = '#5a5a5a';
-                      }
+                      e.currentTarget.style.backgroundColor = 'var(--pf-global--BackgroundColor--200)';
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       } else {
-                        e.currentTarget.style.backgroundColor = '#4a4a4a';
+                        e.currentTarget.style.backgroundColor = 'var(--pf-global--active-color--100)';
                       }
                     }}
                   >
@@ -1572,7 +1571,7 @@ const ProjectSelector: React.FC<{
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        color: '#ffffff'
+                        color: 'var(--pf-global--Color--100)'
                       }}
                       onClick={(e) => {
                         e.preventDefault();
@@ -1957,7 +1956,6 @@ const SchedulerPage: React.FC = () => {
                       {/* Role header */}
                       <div style={{
                         fontSize: '1.2rem',
-                        fontWeight: 'bold',
                         marginBottom: '1rem',
                         paddingBottom: '0.5rem',
                         borderBottom: '2px solid #D1D1D1',
