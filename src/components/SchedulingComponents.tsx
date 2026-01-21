@@ -2,11 +2,10 @@ import React, { useMemo } from 'react';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { Card, CardTitle, CardBody, Label, Spinner } from '@patternfly/react-core';
 import { PodType, EventType } from './types';
-import { isValidPod, calculatePodEffectiveCPU, calculatePodEffectiveMemory } from './utils';
-import { UnschedulablePodBox } from './PodComponents';
+import { isValidPod } from './utils';
 
 // Scheduling Events Component
-export const SchedulingEvents: React.FC = () => {
+export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth = false }) => {
   const [events, loaded, error] = useK8sWatchResource<EventType[]>({
     kind: 'Event',
     isList: true,
@@ -20,10 +19,7 @@ export const SchedulingEvents: React.FC = () => {
     const schedulingReasons = [
       'FailedScheduling',
       'Scheduled',
-      'FailedCreate',
-      'SuccessfulCreate',
-      'FailedMount',
-      'SuccessfulMount',
+
     ];
 
     return events
@@ -44,10 +40,14 @@ export const SchedulingEvents: React.FC = () => {
       .slice(0, 50); // Limit to most recent 50 events
   }, [events]);
 
+  const cardStyle: React.CSSProperties = fullWidth 
+    ? { marginBottom: '1rem', width: '100%' }
+    : { marginBottom: '1rem', width: '50%', flex: '0 0 50%' };
+
   if (!loaded) {
     return (
-      <Card style={{ marginBottom: '1rem', width: '50%', flex: '0 0 50%' }}>
-        <CardBody>
+      <Card style={cardStyle}>
+        <CardBody style={fullWidth ? { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}}>
           <Spinner size="sm" />
         </CardBody>
       </Card>
@@ -56,9 +56,9 @@ export const SchedulingEvents: React.FC = () => {
 
   if (error) {
     return (
-      <Card style={{ marginBottom: '1rem', width: '50%', flex: '0 0 50%' }}>
-        <CardBody>
-          <div style={{ color: '#C9190B', fontSize: '0.875rem' }}>
+      <Card style={cardStyle}>
+        <CardBody style={fullWidth ? { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}}>
+          <div style={{ color: 'var(--pf-global--danger-color--100)', fontSize: '0.875rem' }}>
             Error loading events: {error.message}
           </div>
         </CardBody>
@@ -67,19 +67,19 @@ export const SchedulingEvents: React.FC = () => {
   }
 
   return (
-    <Card style={{ marginBottom: '1rem', width: '50%', flex: '0 0 50%' }}>
-      <CardTitle style={{ padding: '1rem', borderBottom: '1px solid #D1D1D1' }}>
+    <Card style={cardStyle}>
+      <CardTitle style={{ padding: '1rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Label color="blue">Scheduling Events ({schedulingEvents.length})</Label>
         </div>
       </CardTitle>
       <CardBody style={{ padding: '1rem' }}>
-        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: fullWidth ? 'none' : '400px', overflowY: fullWidth ? 'visible' : 'auto' }}>
           {schedulingEvents.length === 0 ? (
             <div style={{ 
               padding: '1rem', 
               textAlign: 'center', 
-              color: '#6A6E73',
+              color: 'var(--pf-global--Color--200)',
               fontSize: '0.875rem'
             }}>
               No scheduling events found
@@ -99,7 +99,7 @@ export const SchedulingEvents: React.FC = () => {
                   key={`${event.metadata.name}-${idx}`}
                   style={{
                     padding: '0.75rem',
-                    borderBottom: idx < schedulingEvents.length - 1 ? '1px solid #D1D1D1' : 'none',
+                    borderBottom: idx < schedulingEvents.length - 1 ? '1px solid var(--pf-global--BorderColor--100)' : 'none',
                   }}
                 >
                   <div style={{ 
@@ -118,7 +118,7 @@ export const SchedulingEvents: React.FC = () => {
                     </Label>
                     <span style={{ 
                       fontSize: '0.75rem', 
-                      color: '#6A6E73',
+                      color: 'var(--pf-global--Color--200)',
                       whiteSpace: 'nowrap'
                     }}>
                       {eventTime.toLocaleTimeString()}
@@ -144,7 +144,7 @@ export const SchedulingEvents: React.FC = () => {
                   {event.involvedObject && (
                     <div style={{ 
                       fontSize: '0.75rem', 
-                      color: '#6A6E73', 
+                      color: 'var(--pf-global--Color--200)', 
                       marginTop: '0.25rem' 
                     }}>
                       {event.involvedObject.kind}/{event.involvedObject.name}
@@ -175,79 +175,72 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
 
   if (unscheduledPods.length === 0) {
     return (
-      <Card style={{ marginBottom: '1rem', width: '50%', flex: '0 0 50%' }}>
-        <CardBody>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Label color="green">Scheduling Pressure: None</Label>
-            <span style={{ fontSize: '0.875rem', color: '#6A6E73' }}>
-              All pods are scheduled
-            </span>
-          </div>
-        </CardBody>
-      </Card>
+      <div style={{ 
+        padding: '0.75rem',
+        backgroundColor: 'var(--pf-global--BackgroundColor--100)',
+        borderRadius: '4px',
+        fontSize: '0.875rem',
+        color: 'var(--pf-global--Color--200)'
+      }}>
+        <Label color="green">Scheduling Pressure: None</Label>
+        <span style={{ marginLeft: '0.5rem' }}>
+          All pods are scheduled
+        </span>
+      </div>
     );
   }
 
-  // Calculate effective CPU and memory for each pod
-  const podsWithResources = unscheduledPods.map(pod => ({
-    pod,
-    effectiveCPU: calculatePodEffectiveCPU(pod),
-    effectiveMemory: calculatePodEffectiveMemory(pod)
-  }));
-
-  // Find max values to normalize
-  const maxEffectiveCPU = Math.max(...podsWithResources.map(p => p.effectiveCPU), 1);
-  const maxEffectiveMemory = Math.max(...podsWithResources.map(p => p.effectiveMemory), 1);
-
-  // Calculate combined resource score (normalized average of CPU and memory)
-  const podsWithScore = podsWithResources.map(({ pod, effectiveCPU, effectiveMemory }) => {
-    // Normalize both to 0-1 range
-    const normalizedCPU = maxEffectiveCPU > 0 ? effectiveCPU / maxEffectiveCPU : 0;
-    const normalizedMemory = maxEffectiveMemory > 0 ? effectiveMemory / maxEffectiveMemory : 0;
-
-    // Combined score (average of normalized CPU and memory)
-    const combinedScore = (normalizedCPU + normalizedMemory) / 2;
-
-    return { pod, effectiveCPU, effectiveMemory, combinedScore };
-  });
-
-  // Sort by combined score (descending)
-  podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
-
-  // Base width and max width for pod boxes - larger when showing names
-  const minWidth = showNames ? 48 : 24;
-  const maxWidth = showNames ? 240 : 120;
+  // Helper function to format time since creation
+  const getTimeSinceCreated = (pod: PodType): string => {
+    const creationTimestamp = (pod.metadata as any).creationTimestamp;
+    if (!creationTimestamp) return 'Unknown';
+    
+    const created = new Date(creationTimestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - created.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) return `${diffDays}d ${diffHours % 24}h`;
+    if (diffHours > 0) return `${diffHours}h ${diffMinutes % 60}m`;
+    if (diffMinutes > 0) return `${diffMinutes}m ${diffSeconds % 60}s`;
+    return `${diffSeconds}s`;
+  };
 
   return (
-    <Card style={{ marginBottom: '1rem', width: '50%', flex: '0 0 50%' }}>
-      <CardTitle style={{ padding: '1rem', borderBottom: '1px solid #D1D1D1' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Label color="red">Scheduling Pressure: {unscheduledPods.length} pod{unscheduledPods.length !== 1 ? 's' : ''} unscheduled</Label>
-        </div>
-      </CardTitle>
-      <CardBody style={{ padding: '1rem' }}>
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.25rem'
-        }}>
-          {podsWithScore.map(({ pod, combinedScore, effectiveCPU, effectiveMemory }) => {
-            // Pods with no resource allocation are half size
-            if (effectiveCPU === 0 && effectiveMemory === 0) {
-              return (
-                <UnschedulablePodBox key={pod.metadata.uid} pod={pod} width={minWidth / 2} showName={showNames} />
-              );
-            }
-
-            // Calculate width proportionally based on combined score
-            const width = minWidth + combinedScore * (maxWidth - minWidth);
-
-            return (
-              <UnschedulablePodBox key={pod.metadata.uid} pod={pod} width={width} showName={showNames} />
-            );
-          })}
-        </div>
-      </CardBody>
-    </Card>
+    <div style={{ marginTop: '0.5rem' }}>
+      <table style={{ 
+        width: '100%', 
+        borderCollapse: 'collapse',
+        fontSize: '0.875rem'
+      }}>
+        <thead>
+          <tr style={{ 
+            borderBottom: '2px solid var(--pf-global--BorderColor--100)',
+            textAlign: 'left'
+          }}>
+            <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Name</th>
+            <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Namespace</th>
+            <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Age</th>
+          </tr>
+        </thead>
+        <tbody>
+          {unscheduledPods.map((pod) => (
+            <tr 
+              key={pod.metadata.uid}
+              style={{ 
+                borderBottom: '1px solid #D1D1D1'
+              }}
+            >
+              <td style={{ padding: '0.5rem' }}>{pod.metadata.name}</td>
+              <td style={{ padding: '0.5rem' }}>{pod.metadata.namespace}</td>
+              <td style={{ padding: '0.5rem' }}>{getTimeSinceCreated(pod)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };

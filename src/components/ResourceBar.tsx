@@ -37,11 +37,11 @@ export const EffectiveCPUBar: React.FC<{
       <div style={{
         width: '100%',
         height: '12px',
-        backgroundColor: '#F0F0F0',
+        backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
         borderRadius: '2px',
         overflow: 'hidden',
         position: 'relative',
-        border: '1px solid #D1D1D1'
+        border: '1px solid var(--pf-global--BorderColor--100)'
       }}>
         <div
           style={{
@@ -115,11 +115,11 @@ export const EffectiveMemoryBar: React.FC<{
       <div style={{
         width: '100%',
         height: '12px',
-        backgroundColor: '#F0F0F0',
+        backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
         borderRadius: '2px',
         overflow: 'hidden',
         position: 'relative',
-        border: '1px solid #D1D1D1'
+        border: '1px solid var(--pf-global--BorderColor--100)'
       }}>
         <div
           style={{
@@ -188,11 +188,11 @@ export const GenericResourceBar: React.FC<{
       <div style={{
         width: '100%',
         height: '12px',
-        backgroundColor: '#F0F0F0',
+        backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
         borderRadius: '2px',
         overflow: 'hidden',
         position: 'relative',
-        border: '1px solid #D1D1D1'
+        border: '1px solid var(--pf-global--BorderColor--100)'
       }}>
         <div
           style={{

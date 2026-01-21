@@ -4,14 +4,18 @@ import {
   Spinner,
   Label,
   Checkbox,
+  Tabs,
+  Tab,
+  TabTitleText,
 } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { NodeType, PodType, NamespaceType } from './types';
 import { isValidNode, isValidPod, getNodeRoles, parseCPUQuantity, parseMemoryQuantity, parseGenericResource } from './utils';
-import { SchedulingEvents, SchedulingPressure } from './SchedulingComponents';
+import { SchedulingEvents } from './SchedulingComponents';
 import { ResourceSelector, ProjectSelector } from './SelectorComponents';
 import { NodeCard } from './NodeCard';
 import { CompactNodeCard } from './CompactNodeCard';
+import { ClusterOverview } from './ClusterOverview';
 
 const SchedulerPage: React.FC = () => {
   const [nodes, nodesLoaded, nodesError] = useK8sWatchResource<NodeType[]>({
@@ -48,6 +52,9 @@ const SchedulerPage: React.FC = () => {
 
   // Option to show compact view
   const [compactView, setCompactView] = useState<boolean>(false);
+
+  // Active tab state
+  const [activeTab, setActiveTab] = useState<string | number>(0);
 
   const validNodes = useMemo(() => {
     if (!nodes || !Array.isArray(nodes)) return [];
@@ -130,6 +137,7 @@ const SchedulerPage: React.FC = () => {
     // Otherwise, filter by selected namespaces
     return pods.filter(pod => selectedNamespaces.has(pod.metadata.namespace));
   }, [pods, selectedNamespaces]);
+
 
   // Calculate resource requests and limits per node for all resources
   const nodeResourceUsage = useMemo(() => {
@@ -330,28 +338,6 @@ const SchedulerPage: React.FC = () => {
               onResourceToggle={handleResourceToggle}
             />
           )}
-          {nodesLoaded && (
-            <>
-              <Checkbox
-                id="hide-empty-nodes"
-                label="Only show nodes with workloads"
-                isChecked={hideEmptyNodes}
-                onChange={(_, checked) => setHideEmptyNodes(checked)}
-              />
-              <Checkbox
-                id="show-pod-names"
-                label="Show pod names"
-                isChecked={showPodNames}
-                onChange={(_, checked) => setShowPodNames(checked)}
-              />
-              <Checkbox
-                id="compact-view"
-                label="Compact view"
-                isChecked={compactView}
-                onChange={(_, checked) => setCompactView(checked)}
-              />
-            </>
-          )}
         </div>
       </div>
       <div style={{
@@ -368,102 +354,144 @@ const SchedulerPage: React.FC = () => {
           {!nodesLoaded ? (
             <Spinner />
           ) : (
-            <>
-              <div style={{ 
-                display: 'flex', 
-                gap: '1rem', 
-                width: '100%',
-                alignItems: 'flex-start'
-              }}>
-                <SchedulingPressure pods={filteredPods || []} showNames={showPodNames} />
-                <SchedulingEvents />
-              </div>
-              {compactView ? (
-                <>
-                  {nodesByRole.map(([roleKey, group]) => (
-                    <div key={roleKey} style={{ marginBottom: '2rem', width: '100%' }}>
-                      {/* Role header */}
-                      <div style={{
-                        fontSize: '1.2rem',
-                        marginBottom: '1rem',
-                        paddingBottom: '0.5rem',
-                        borderBottom: '2px solid #D1D1D1',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}>
-                        {group.roles.length > 0 ? (
-                          <>
-                            <span>
-                              {group.roles.map(role => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
-                            </span>
-                            <span style={{ fontSize: '0.9rem', color: '#6A6E73', fontWeight: 'normal' }}>
-                              ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span>No Role</span>
-                            <span style={{ fontSize: '0.9rem', color: '#6A6E73', fontWeight: 'normal' }}>
-                              ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      {/* Nodes grid */}
-                      <div style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '1rem',
-                        justifyContent: 'flex-start',
-                        alignItems: 'flex-start'
-                      }}>
-                        {group.nodes.map((node) => {
-                          const cpuData = nodeResourceUsage['cpu'];
-                          const memoryData = nodeResourceUsage['memory'];
-
-                          return (
-                            <CompactNodeCard
-                              key={node._key}
-                              node={node}
-                              requestedCPUs={cpuData?.requests?.[node.metadata.name] || 0}
-                              limitedCPUs={cpuData?.limits?.[node.metadata.name] || 0}
-                              requestedMemory={memoryData?.requests?.[node.metadata.name] || 0}
-                              limitedMemory={memoryData?.limits?.[node.metadata.name] || 0}
-                              pods={podsByNode[node.metadata.name] || []}
-                              showPodNames={showPodNames}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <>
-                  {displayNodes.map((node) => {
-                    // Get CPU and Memory usage (for backward compatibility)
-                    const cpuData = nodeResourceUsage['cpu'];
-                    const memoryData = nodeResourceUsage['memory'];
-
-                    return (
-                      <NodeCard
-                        key={node._key}
-                        node={node}
-                        requestedCPUs={cpuData?.requests?.[node.metadata.name] || 0}
-                        limitedCPUs={cpuData?.limits?.[node.metadata.name] || 0}
-                        requestedMemory={memoryData?.requests?.[node.metadata.name] || 0}
-                        limitedMemory={memoryData?.limits?.[node.metadata.name] || 0}
-                        pods={podsByNode[node.metadata.name] || []}
-                        selectedResources={selectedResources}
-                        resourceUsage={nodeResourceUsage}
-                        showPodNames={showPodNames}
+            <Tabs
+              activeKey={activeTab}
+              onSelect={(_, tabIndex) => setActiveTab(tabIndex)}
+            >
+              <Tab eventKey={0} title={<TabTitleText>Overview</TabTitleText>}>
+                <div style={{ paddingTop: '1rem' }}>
+                  <ClusterOverview 
+                    nodes={validNodes} 
+                    pods={filteredPods || []} 
+                    nodeResourceUsage={nodeResourceUsage}
+                    showPodNames={showPodNames}
+                    selectedResources={selectedResources}
+                  />
+                </div>
+              </Tab>
+              <Tab eventKey={1} title={<TabTitleText>Nodes</TabTitleText>}>
+                <div style={{ paddingTop: '1rem' }}>
+                  {nodesLoaded && (
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '1rem', 
+                      marginBottom: '1rem',
+                      flexWrap: 'wrap',
+                      alignItems: 'center'
+                    }}>
+                      <Checkbox
+                        id="hide-empty-nodes"
+                        label="Only show nodes with workloads"
+                        isChecked={hideEmptyNodes}
+                        onChange={(_, checked) => setHideEmptyNodes(checked)}
                       />
-                    );
-                  })}
-                </>
-              )}
-            </>
+                      <Checkbox
+                        id="show-pod-names"
+                        label="Show pod names"
+                        isChecked={showPodNames}
+                        onChange={(_, checked) => setShowPodNames(checked)}
+                      />
+                      <Checkbox
+                        id="compact-view"
+                        label="Compact view"
+                        isChecked={compactView}
+                        onChange={(_, checked) => setCompactView(checked)}
+                      />
+                    </div>
+                  )}
+                  {compactView ? (
+                    <>
+                      {nodesByRole.map(([roleKey, group]) => (
+                        <div key={roleKey} style={{ marginBottom: '2rem', width: '100%' }}>
+                          {/* Role header */}
+                          <div style={{
+                            fontSize: '1.2rem',
+                            marginBottom: '1rem',
+                            paddingBottom: '0.5rem',
+                            borderBottom: '2px solid #D1D1D1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            {group.roles.length > 0 ? (
+                              <>
+                                <span>
+                                  {group.roles.map(role => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
+                                </span>
+                                <span style={{ fontSize: '0.9rem', color: '#6A6E73', fontWeight: 'normal' }}>
+                                  ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span>No Role</span>
+                                <span style={{ fontSize: '0.9rem', color: '#6A6E73', fontWeight: 'normal' }}>
+                                  ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          {/* Nodes grid */}
+                          <div style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '1rem',
+                            justifyContent: 'flex-start',
+                            alignItems: 'flex-start'
+                          }}>
+                            {group.nodes.map((node) => {
+                              const cpuData = nodeResourceUsage['cpu'];
+                              const memoryData = nodeResourceUsage['memory'];
+
+                              return (
+                                <CompactNodeCard
+                                  key={node._key}
+                                  node={node}
+                                  requestedCPUs={cpuData?.requests?.[node.metadata.name] || 0}
+                                  limitedCPUs={cpuData?.limits?.[node.metadata.name] || 0}
+                                  requestedMemory={memoryData?.requests?.[node.metadata.name] || 0}
+                                  limitedMemory={memoryData?.limits?.[node.metadata.name] || 0}
+                                  pods={podsByNode[node.metadata.name] || []}
+                                  showPodNames={showPodNames}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {displayNodes.map((node) => {
+                        // Get CPU and Memory usage (for backward compatibility)
+                        const cpuData = nodeResourceUsage['cpu'];
+                        const memoryData = nodeResourceUsage['memory'];
+
+                        return (
+                          <NodeCard
+                            key={node._key}
+                            node={node}
+                            requestedCPUs={cpuData?.requests?.[node.metadata.name] || 0}
+                            limitedCPUs={cpuData?.limits?.[node.metadata.name] || 0}
+                            requestedMemory={memoryData?.requests?.[node.metadata.name] || 0}
+                            limitedMemory={memoryData?.limits?.[node.metadata.name] || 0}
+                            pods={podsByNode[node.metadata.name] || []}
+                            selectedResources={selectedResources}
+                            resourceUsage={nodeResourceUsage}
+                            showPodNames={showPodNames}
+                          />
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              </Tab>
+              <Tab eventKey={2} title={<TabTitleText>Events</TabTitleText>}>
+                <div style={{ paddingTop: '1rem' }}>
+                  <SchedulingEvents fullWidth={true} />
+                </div>
+              </Tab>
+            </Tabs>
           )}
         </Suspense>
       </div>
