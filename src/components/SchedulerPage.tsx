@@ -6,7 +6,7 @@ import {
   CardBody,
   Spinner,
   Label,
-  Tooltip,
+  Popover,
   Checkbox,
   Button,
   SearchInput,
@@ -137,63 +137,25 @@ const formatMemory = (bytes: number): { value: string, unit: string } => {
   };
 };
 
-// Single CPU Bar Component
-const SingleCPUBar: React.FC<{
+// Effective CPU Bar Component (max of requests and limits)
+const EffectiveCPUBar: React.FC<{
   totalCPUs: number;
-  usedCPUs: number;
+  requestedCPUs: number;
+  limitedCPUs: number;
   nodeName: string;
-  label: string;
-  barColor: string;
-}> = ({ totalCPUs, usedCPUs, nodeName, label, barColor }) => {
-  const percentageUsed = totalCPUs > 0 ? Math.min((usedCPUs / totalCPUs) * 100, 100) : 0;
+  hoveredPodCPU?: number;
+}> = ({ totalCPUs, requestedCPUs, limitedCPUs, nodeName, hoveredPodCPU }) => {
+  // Effective CPU is the maximum of requests and limits
+  const effectiveCPUs = Math.max(requestedCPUs, limitedCPUs);
+  const percentageUsed = totalCPUs > 0 ? Math.min((effectiveCPUs / totalCPUs) * 100, 100) : 0;
+  const hoveredPercentage = hoveredPodCPU && totalCPUs > 0 ? Math.min((hoveredPodCPU / totalCPUs) * 100, 100) : 0;
 
-  return (
-    <div style={{ width: '100%' }}>
-    <div style={{
-      display: 'flex',
-        justifyContent: 'space-between',
-      alignItems: 'center',
-        marginBottom: '0.25rem'
-      }}>
-        <span style={{ fontSize: '0.7rem' }}>{label}</span>
-        <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
-          {usedCPUs.toFixed(2)} / {totalCPUs.toFixed(2)} cores
-        </span>
-      </div>
-      <div style={{
-        width: '100%',
-        height: '12px',
-        backgroundColor: '#F0F0F0',
-        borderRadius: '2px',
-      overflow: 'hidden',
-        position: 'relative',
-        border: '1px solid #D1D1D1'
-    }}>
-        <div
-          style={{
-            width: `${percentageUsed}%`,
-            height: '100%',
-            backgroundColor: barColor,
-            transition: 'width 0.3s ease, background-color 0.3s ease'
-          }}
-          title={`${nodeName}: ${usedCPUs.toFixed(2)} of ${totalCPUs.toFixed(2)} CPUs ${label.toLowerCase()}`}
-        />
-      </div>
-    </div>
-  );
-};
-
-// Single Memory Bar Component
-const SingleMemoryBar: React.FC<{
-  totalMemory: number;
-  usedMemory: number;
-  nodeName: string;
-  label: string;
-  barColor: string;
-}> = ({ totalMemory, usedMemory, nodeName, label, barColor }) => {
-  const percentageUsed = totalMemory > 0 ? Math.min((usedMemory / totalMemory) * 100, 100) : 0;
-  const usedFormatted = formatMemory(usedMemory);
-  const totalFormatted = formatMemory(totalMemory);
+  // Color based on utilization
+  const getBarColor = () => {
+    if (percentageUsed < 70) return '#3E8635'; // green
+    if (percentageUsed < 90) return '#F0AB00'; // orange/warning
+    return '#C9190B'; // red/danger
+  };
 
   return (
     <div style={{ width: '100%' }}>
@@ -203,7 +165,85 @@ const SingleMemoryBar: React.FC<{
         alignItems: 'center',
         marginBottom: '0.25rem'
       }}>
-        <span style={{ fontSize: '0.7rem' }}>{label}</span>
+        <span style={{ fontSize: '0.7rem' }}>Effective CPU</span>
+        <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
+          {effectiveCPUs.toFixed(2)} / {totalCPUs.toFixed(2)} cores
+        </span>
+      </div>
+      <div style={{
+        width: '100%',
+        height: '12px',
+        backgroundColor: '#F0F0F0',
+        borderRadius: '2px',
+        overflow: 'hidden',
+        position: 'relative',
+        border: '1px solid #D1D1D1'
+      }}>
+        <div
+          style={{
+            width: `${percentageUsed}%`,
+            height: '100%',
+            backgroundColor: getBarColor(),
+            transition: 'width 0.3s ease, background-color 0.3s ease'
+          }}
+          title={`${nodeName}: ${effectiveCPUs.toFixed(2)} of ${totalCPUs.toFixed(2)} CPUs`}
+        />
+        {/* Overlay for hovered pod */}
+        {hoveredPodCPU && hoveredPodCPU > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: `${hoveredPercentage}%`,
+              height: '100%',
+              backgroundColor: 'rgba(6, 0, 204, 0.5)',
+              border: '2px solid #06C',
+              boxSizing: 'border-box',
+              pointerEvents: 'none',
+              transition: 'width 0.2s ease'
+            }}
+            title={`Hovered pod: ${hoveredPodCPU.toFixed(2)} cores (${hoveredPercentage.toFixed(1)}%)`}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Effective Memory Bar Component (max of requests and limits)
+const EffectiveMemoryBar: React.FC<{
+  totalMemory: number;
+  requestedMemory: number;
+  limitedMemory: number;
+  nodeName: string;
+  hoveredPodMemory?: number;
+}> = ({ totalMemory, requestedMemory, limitedMemory, nodeName, hoveredPodMemory }) => {
+  // Effective Memory is the maximum of requests and limits
+  const effectiveMemory = Math.max(requestedMemory, limitedMemory);
+  const percentageUsed = totalMemory > 0 ? Math.min((effectiveMemory / totalMemory) * 100, 100) : 0;
+  const hoveredPercentage = hoveredPodMemory && totalMemory > 0 ? Math.min((hoveredPodMemory / totalMemory) * 100, 100) : 0;
+  
+  const usedFormatted = formatMemory(effectiveMemory);
+  const totalFormatted = formatMemory(totalMemory);
+  const hoveredFormatted = hoveredPodMemory ? formatMemory(hoveredPodMemory) : null;
+
+  // Color based on utilization
+  const getBarColor = () => {
+    if (percentageUsed < 70) return '#3E8635'; // green
+    if (percentageUsed < 90) return '#F0AB00'; // orange/warning
+    return '#C9190B'; // red/danger
+  };
+
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '0.25rem'
+      }}>
+        <span style={{ fontSize: '0.7rem' }}>Effective Memory</span>
         <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
           {usedFormatted.value} {usedFormatted.unit} / {totalFormatted.value} {totalFormatted.unit}
         </span>
@@ -221,71 +261,31 @@ const SingleMemoryBar: React.FC<{
           style={{
             width: `${percentageUsed}%`,
             height: '100%',
-            backgroundColor: barColor,
+            backgroundColor: getBarColor(),
             transition: 'width 0.3s ease, background-color 0.3s ease'
           }}
-          title={`${nodeName}: ${usedFormatted.value} ${usedFormatted.unit} of ${totalFormatted.value} ${totalFormatted.unit} ${label.toLowerCase()}`}
+          title={`${nodeName}: ${usedFormatted.value} ${usedFormatted.unit} of ${totalFormatted.value} ${totalFormatted.unit}`}
         />
+        {/* Overlay for hovered pod */}
+        {hoveredPodMemory && hoveredPodMemory > 0 && hoveredFormatted && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: `${hoveredPercentage}%`,
+              height: '100%',
+              backgroundColor: 'rgba(139, 92, 246, 0.5)',
+              border: '2px solid #8B5CF6',
+              boxSizing: 'border-box',
+              pointerEvents: 'none',
+              transition: 'width 0.2s ease'
+            }}
+            title={`Hovered pod: ${hoveredFormatted.value} ${hoveredFormatted.unit} (${hoveredPercentage.toFixed(1)}%)`}
+          />
+        )}
       </div>
     </div>
-  );
-};
-
-// Effective CPU Bar Component (max of requests and limits)
-const EffectiveCPUBar: React.FC<{
-  totalCPUs: number;
-  requestedCPUs: number;
-  limitedCPUs: number;
-  nodeName: string;
-}> = ({ totalCPUs, requestedCPUs, limitedCPUs, nodeName }) => {
-  // Effective CPU is the maximum of requests and limits
-  const effectiveCPUs = Math.max(requestedCPUs, limitedCPUs);
-  const percentageUsed = totalCPUs > 0 ? Math.min((effectiveCPUs / totalCPUs) * 100, 100) : 0;
-
-  // Color based on utilization
-  const getBarColor = () => {
-    if (percentageUsed < 70) return '#3E8635'; // green
-    if (percentageUsed < 90) return '#F0AB00'; // orange/warning
-    return '#C9190B'; // red/danger
-  };
-
-  return (
-    <SingleCPUBar
-      totalCPUs={totalCPUs}
-      usedCPUs={effectiveCPUs}
-      nodeName={nodeName}
-      label="Effective CPU"
-      barColor={getBarColor()}
-    />
-  );
-};
-
-// Effective Memory Bar Component (max of requests and limits)
-const EffectiveMemoryBar: React.FC<{
-  totalMemory: number;
-  requestedMemory: number;
-  limitedMemory: number;
-  nodeName: string;
-}> = ({ totalMemory, requestedMemory, limitedMemory, nodeName }) => {
-  // Effective Memory is the maximum of requests and limits
-  const effectiveMemory = Math.max(requestedMemory, limitedMemory);
-  const percentageUsed = totalMemory > 0 ? Math.min((effectiveMemory / totalMemory) * 100, 100) : 0;
-
-  // Color based on utilization
-  const getBarColor = () => {
-    if (percentageUsed < 70) return '#3E8635'; // green
-    if (percentageUsed < 90) return '#F0AB00'; // orange/warning
-    return '#C9190B'; // red/danger
-  };
-
-  return (
-    <SingleMemoryBar
-      totalMemory={totalMemory}
-      usedMemory={effectiveMemory}
-      nodeName={nodeName}
-      label="Effective Memory"
-      barColor={getBarColor()}
-    />
   );
 };
 
@@ -479,7 +479,15 @@ const calculatePodEffectiveMemory = (pod: PodType): number => {
 };
 
 // Pod Box Component - small box representing a pod
-const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ pod, width, showName }) => {
+const PodBox: React.FC<{ 
+  pod: PodType; 
+  width: number; 
+  showName: boolean;
+  onHover?: (cpu: number, memory: number) => void;
+  onHoverEnd?: () => void;
+}> = ({ pod, width, showName, onHover, onHoverEnd }) => {
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
   const getPhaseColor = (phase: string) => {
     switch (phase) {
       case 'Running':
@@ -499,23 +507,60 @@ const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ 
   const effectiveMemory = calculatePodEffectiveMemory(pod);
   const memoryFormatted = formatMemory(effectiveMemory);
 
-  const podTooltip = (
-    <div style={{ whiteSpace: 'pre-line', fontSize: '0.875rem' }}>
-      <strong>Name:</strong> {pod.metadata.name}
-      <br />
-      <strong>Namespace:</strong> {pod.metadata.namespace}
-      <br />
-      <strong>Phase:</strong> {pod.status.phase}
-      <br />
-      <strong>Effective CPU:</strong> {effectiveCPU.toFixed(2)} cores
-      <br />
-      <strong>Effective Memory:</strong> {memoryFormatted.value} {memoryFormatted.unit}
+  const handleMouseEnter = () => {
+    if (onHover) {
+      onHover(effectiveCPU, effectiveMemory);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (onHoverEnd) {
+      onHoverEnd();
+    }
+  };
+
+  const handleClick = () => {
+    setIsTooltipVisible(!isTooltipVisible);
+  };
+
+  const podContent = (
+    <div style={{ fontSize: '0.8rem' }}>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Name:</span>
+        <span style={{ wordBreak: 'break-word' }}>{pod.metadata.name}</span>
+      </div>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Namespace:</span>
+        <span>{pod.metadata.namespace}</span>
+      </div>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Phase:</span>
+        <span>{pod.status.phase}</span>
+      </div>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>CPU:</span>
+        <span>{effectiveCPU.toFixed(2)} cores</span>
+      </div>
+      <div style={{ display: 'flex' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Memory:</span>
+        <span>{memoryFormatted.value} {memoryFormatted.unit}</span>
+      </div>
     </div>
   );
 
   return (
-    <Tooltip content={podTooltip}>
+    <Popover
+      headerContent={<div>Pod Details</div>}
+      bodyContent={podContent}
+      isVisible={isTooltipVisible}
+      shouldClose={() => setIsTooltipVisible(false)}
+      position="bottom"
+      enableFlip
+    >
       <div
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         style={{
           width: `${width}px`,
           minWidth: showName ? '48px' : undefined,
@@ -523,7 +568,7 @@ const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ 
           backgroundColor: getPhaseColor(pod.status.phase),
           borderRadius: '4px',
           border: '1px solid #D1D1D1',
-          cursor: 'help',
+          cursor: 'pointer',
           flexShrink: 0,
           display: showName ? 'flex' : 'block',
           alignItems: showName ? 'center' : undefined,
@@ -542,18 +587,25 @@ const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ 
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             width: '100%',
-            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+            pointerEvents: 'none'
           }}>
             {pod.metadata.name}
           </span>
         )}
       </div>
-    </Tooltip>
+    </Popover>
   );
 };
 
 // Pods Display Component - shows all pods for a node
-const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean; title: string }> = ({ pods, showNames, title }) => {
+const PodsDisplay: React.FC<{ 
+  pods: PodType[]; 
+  showNames: boolean; 
+  title: string;
+  onPodHover?: (cpu: number, memory: number) => void;
+  onPodHoverEnd?: () => void;
+}> = ({ pods, showNames, title, onPodHover, onPodHoverEnd }) => {
   if (pods.length === 0) {
     return null;
   }
@@ -610,7 +662,14 @@ const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean; title: string
           // Pods with no resource allocation are half size
           if (effectiveCPU === 0 && effectiveMemory === 0) {
             return (
-              <PodBox key={pod.metadata.uid} pod={pod} width={minWidth / 2} showName={showNames} />
+              <PodBox 
+                key={pod.metadata.uid} 
+                pod={pod} 
+                width={minWidth / 2} 
+                showName={showNames}
+                onHover={onPodHover}
+                onHoverEnd={onPodHoverEnd}
+              />
             );
           }
 
@@ -618,7 +677,14 @@ const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean; title: string
           const width = minWidth + combinedScore * (maxWidth - minWidth);
 
           return (
-            <PodBox key={pod.metadata.uid} pod={pod} width={width} showName={showNames} />
+            <PodBox 
+              key={pod.metadata.uid} 
+              pod={pod} 
+              width={width} 
+              showName={showNames}
+              onHover={onPodHover}
+              onHoverEnd={onPodHoverEnd}
+            />
           );
         })}
         </div>
@@ -663,8 +729,21 @@ const NodeCard: React.FC<{
   resourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } };
   showPodNames: boolean;
 }> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods, selectedResources, resourceUsage, showPodNames }) => {
+  const [hoveredPodCPU, setHoveredPodCPU] = useState<number | undefined>(undefined);
+  const [hoveredPodMemory, setHoveredPodMemory] = useState<number | undefined>(undefined);
+
   const totalCPUs = parseCPUQuantity(node.status?.capacity?.cpu || '0');
   const totalMemory = parseMemoryQuantity(node.status?.capacity?.memory || '0');
+
+  const handlePodHover = (cpu: number, memory: number) => {
+    setHoveredPodCPU(cpu);
+    setHoveredPodMemory(memory);
+  };
+
+  const handlePodHoverEnd = () => {
+    setHoveredPodCPU(undefined);
+    setHoveredPodMemory(undefined);
+  };
 
   // Separate pods into regular and system pods
   const regularPods = pods.filter(pod => {
@@ -721,6 +800,7 @@ const NodeCard: React.FC<{
             requestedCPUs={requestedCPUs}
             limitedCPUs={limitedCPUs}
             nodeName={node.metadata.name}
+            hoveredPodCPU={hoveredPodCPU}
           />
         )}
         {selectedResources.has('memory') && (
@@ -729,6 +809,7 @@ const NodeCard: React.FC<{
             requestedMemory={requestedMemory}
             limitedMemory={limitedMemory}
             nodeName={node.metadata.name}
+            hoveredPodMemory={hoveredPodMemory}
           />
         )}
         {Array.from(selectedResources)
@@ -756,8 +837,20 @@ const NodeCard: React.FC<{
               />
             );
           })}
-        <PodsDisplay pods={regularPods} showNames={showPodNames} title="Pods" />
-        <PodsDisplay pods={systemPods} showNames={showPodNames} title="System Pods" />
+        <PodsDisplay 
+          pods={regularPods} 
+          showNames={showPodNames} 
+          title="Pods"
+          onPodHover={handlePodHover}
+          onPodHoverEnd={handlePodHoverEnd}
+        />
+        <PodsDisplay 
+          pods={systemPods} 
+          showNames={showPodNames} 
+          title="System Pods"
+          onPodHover={handlePodHover}
+          onPodHoverEnd={handlePodHoverEnd}
+        />
       </CardBody>
     </Card>
   );
@@ -804,8 +897,8 @@ const CompactNodeCard: React.FC<{
 
   podsWithScore.sort((a, b) => b.combinedScore - a.combinedScore);
 
-  const minWidth = showPodNames ? 24 : 12;
-  const maxWidth = showPodNames ? 48 : 24;
+  const minWidth = showPodNames ? 48 : 12;
+  const maxWidth = showPodNames ? 120 : 24;
 
   return (
     <Card
@@ -818,16 +911,7 @@ const CompactNodeCard: React.FC<{
         alignItems: 'center',
         padding: '1rem',
         boxSizing: 'border-box',
-        position: 'relative',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'scale(1.05)';
-        e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.3)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'scale(1)';
-        e.currentTarget.style.boxShadow = '';
+        position: 'relative'
       }}
     >
         {/* Node name */}
@@ -904,13 +988,23 @@ const CompactNodeCard: React.FC<{
               // Pods with no resource allocation are half size
               if (effectiveCPU === 0 && effectiveMemory === 0) {
                 return (
-                  <PodBox key={pod.metadata.uid} pod={pod} width={minWidth / 2} showName={showPodNames} />
+                  <PodBox 
+                    key={pod.metadata.uid} 
+                    pod={pod} 
+                    width={minWidth / 2} 
+                    showName={showPodNames}
+                  />
                 );
               }
 
               const width = minWidth + combinedScore * (maxWidth - minWidth);
               return (
-                <PodBox key={pod.metadata.uid} pod={pod} width={width} showName={showPodNames} />
+                <PodBox 
+                  key={pod.metadata.uid} 
+                  pod={pod} 
+                  width={width} 
+                  showName={showPodNames}
+                />
               );
             })}
           </div>
@@ -968,30 +1062,57 @@ const getSchedulingFailureReason = (pod: PodType): string | null => {
 
 // Unschedulable Pod Box Component - small box representing an unschedulable pod
 const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ pod, width, showName }) => {
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
   const effectiveCPU = calculatePodEffectiveCPU(pod);
   const effectiveMemory = calculatePodEffectiveMemory(pod);
   const memoryFormatted = formatMemory(effectiveMemory);
   const reason = getSchedulingFailureReason(pod) || 'No reason available';
 
-  const podTooltip = (
-    <div style={{ whiteSpace: 'pre-line', fontSize: '0.875rem' }}>
-      <strong>Name:</strong> {pod.metadata.name}
-      <br />
-      <strong>Namespace:</strong> {pod.metadata.namespace}
-      <br />
-      <strong>Phase:</strong> {pod.status.phase}
-      <br />
-      <strong>Reason:</strong> {reason}
-      <br />
-      <strong>Effective CPU:</strong> {effectiveCPU.toFixed(2)} cores
-      <br />
-      <strong>Effective Memory:</strong> {memoryFormatted.value} {memoryFormatted.unit}
+  const handleClick = () => {
+    setIsTooltipVisible(!isTooltipVisible);
+  };
+
+  const podContent = (
+    <div style={{ fontSize: '0.8rem' }}>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Name:</span>
+        <span style={{ wordBreak: 'break-word' }}>{pod.metadata.name}</span>
+      </div>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Namespace:</span>
+        <span>{pod.metadata.namespace}</span>
+      </div>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Phase:</span>
+        <span>{pod.status.phase}</span>
+      </div>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Reason:</span>
+        <span style={{ wordBreak: 'break-word' }}>{reason}</span>
+      </div>
+      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>CPU:</span>
+        <span>{effectiveCPU.toFixed(2)} cores</span>
+      </div>
+      <div style={{ display: 'flex' }}>
+        <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Memory:</span>
+        <span>{memoryFormatted.value} {memoryFormatted.unit}</span>
+      </div>
     </div>
   );
 
   return (
-    <Tooltip content={podTooltip}>
+    <Popover
+      headerContent={<div>Unscheduled Pod Details</div>}
+      bodyContent={podContent}
+      isVisible={isTooltipVisible}
+      shouldClose={() => setIsTooltipVisible(false)}
+      position="bottom"
+      enableFlip
+    >
       <div
+        onClick={handleClick}
         style={{
           width: `${width}px`,
           minWidth: showName ? '48px' : undefined,
@@ -999,7 +1120,7 @@ const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boo
           backgroundColor: '#8A8D90',
           borderRadius: '4px',
           border: '2px dashed #6A6E73',
-          cursor: 'help',
+          cursor: 'pointer',
           flexShrink: 0,
           display: showName ? 'flex' : 'block',
           alignItems: showName ? 'center' : undefined,
@@ -1018,13 +1139,14 @@ const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boo
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             width: '100%',
-            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+            pointerEvents: 'none'
           }}>
             {pod.metadata.name}
           </span>
         )}
       </div>
-    </Tooltip>
+    </Popover>
   );
 };
 
