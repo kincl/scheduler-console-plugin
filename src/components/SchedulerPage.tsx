@@ -518,7 +518,7 @@ const PodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ 
       <div
         style={{
           width: `${width}px`,
-          minWidth: showName ? '48px' : '24px',
+          minWidth: showName ? '48px' : undefined,
           height: '24px',
           backgroundColor: getPhaseColor(pod.status.phase),
           borderRadius: '4px',
@@ -608,7 +608,14 @@ const PodsDisplay: React.FC<{ pods: PodType[]; showNames: boolean; title: string
         flexWrap: 'wrap',
             gap: '0.25rem'
       }}>
-        {podsWithScore.map(({ pod, combinedScore }) => {
+        {podsWithScore.map(({ pod, combinedScore, effectiveCPU, effectiveMemory }) => {
+          // Pods with no resource allocation are half size
+          if (effectiveCPU === 0 && effectiveMemory === 0) {
+            return (
+              <PodBox key={pod.metadata.uid} pod={pod} width={minWidth / 2} showName={showNames} />
+            );
+          }
+
           // Calculate width proportionally based on combined score
           const width = minWidth + combinedScore * (maxWidth - minWidth);
 
@@ -902,7 +909,14 @@ const CompactNodeCard: React.FC<{
             width: '100%',
             marginTop: '0.5rem'
           }}>
-            {podsWithScore.map(({ pod, combinedScore }) => {
+            {podsWithScore.map(({ pod, combinedScore, effectiveCPU, effectiveMemory }) => {
+              // Pods with no resource allocation are half size
+              if (effectiveCPU === 0 && effectiveMemory === 0) {
+                return (
+                  <PodBox key={pod.metadata.uid} pod={pod} width={minWidth / 2} showName={showPodNames} />
+                );
+              }
+
               const width = minWidth + combinedScore * (maxWidth - minWidth);
               return (
                 <PodBox key={pod.metadata.uid} pod={pod} width={width} showName={showPodNames} />
@@ -989,7 +1003,7 @@ const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boo
       <div
         style={{
           width: `${width}px`,
-          minWidth: showName ? '48px' : '24px',
+          minWidth: showName ? '48px' : undefined,
           height: '24px',
           backgroundColor: '#8A8D90',
           borderRadius: '4px',
@@ -1092,7 +1106,14 @@ const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean }> = ({
           flexWrap: 'wrap',
           gap: '0.25rem'
         }}>
-          {podsWithScore.map(({ pod, combinedScore }) => {
+          {podsWithScore.map(({ pod, combinedScore, effectiveCPU, effectiveMemory }) => {
+            // Pods with no resource allocation are half size
+            if (effectiveCPU === 0 && effectiveMemory === 0) {
+              return (
+                <UnschedulablePodBox key={pod.metadata.uid} pod={pod} width={minWidth / 2} showName={showNames} />
+              );
+            }
+
             // Calculate width proportionally based on combined score
             const width = minWidth + combinedScore * (maxWidth - minWidth);
 
