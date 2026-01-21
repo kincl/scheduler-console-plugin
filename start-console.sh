@@ -39,7 +39,7 @@ echo "Console URL: http://rhel9:${CONSOLE_PORT}"
 echo "Console Platform: $CONSOLE_IMAGE_PLATFORM"
 
 
-BRIDGE_PLUGINS="${PLUGIN_NAME}=http://192.168.4.90:9001"
+BRIDGE_PLUGINS="${PLUGIN_NAME}=http://192.168.4.92:9001"
 export CONTAINER_HOST="ssh://jason@rhel9-local.kinclfamily.net:22/run/user/1001/podman/podman.sock"
 podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --network=host --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
 
