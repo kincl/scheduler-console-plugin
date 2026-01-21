@@ -296,8 +296,10 @@ const GenericResourceBar: React.FC<{
   nodeName: string;
   label: string;
   formatValue: (value: number) => string;
-}> = ({ total, used, nodeName, label, formatValue }) => {
+  hoveredValue?: number;
+}> = ({ total, used, nodeName, label, formatValue, hoveredValue }) => {
   const percentageUsed = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+  const hoveredPercentage = hoveredValue && total > 0 ? Math.min((hoveredValue / total) * 100, 100) : 0;
 
   // Color based on utilization
   const getBarColor = () => {
@@ -337,6 +339,24 @@ const GenericResourceBar: React.FC<{
           }}
           title={`${nodeName}: ${formatValue(used)} of ${formatValue(total)} ${label.toLowerCase()}`}
         />
+        {/* Overlay for hovered pod */}
+        {hoveredValue && hoveredValue > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: `${hoveredPercentage}%`,
+              height: '100%',
+              backgroundColor: 'rgba(236, 100, 75, 0.5)',
+              border: '2px solid #EC644B',
+              boxSizing: 'border-box',
+              pointerEvents: 'none',
+              transition: 'width 0.2s ease'
+            }}
+            title={`Hovered pod: ${formatValue(hoveredValue)} (${hoveredPercentage.toFixed(1)}%)`}
+          />
+        )}
       </div>
     </div>
   );
@@ -478,14 +498,45 @@ const calculatePodEffectiveMemory = (pod: PodType): number => {
   return Math.max(totalRequests, totalLimits);
 };
 
+// Calculate effective resource value for a pod (max of requests and limits across all containers)
+const calculatePodEffectiveResource = (pod: PodType, resourceName: string): number => {
+  let totalRequests = 0;
+  let totalLimits = 0;
+
+  pod.spec.containers.forEach(container => {
+    const request = container.resources?.requests?.[resourceName] || '0';
+    const limit = container.resources?.limits?.[resourceName] || '0';
+    
+    // Parse based on resource type
+    let parsedRequest = 0;
+    let parsedLimit = 0;
+    if (resourceName === 'cpu') {
+      parsedRequest = parseCPUQuantity(request);
+      parsedLimit = parseCPUQuantity(limit);
+    } else if (resourceName === 'memory') {
+      parsedRequest = parseMemoryQuantity(request);
+      parsedLimit = parseMemoryQuantity(limit);
+    } else {
+      parsedRequest = parseGenericResource(request);
+      parsedLimit = parseGenericResource(limit);
+    }
+    
+    totalRequests += parsedRequest;
+    totalLimits += parsedLimit;
+  });
+
+  return Math.max(totalRequests, totalLimits);
+};
+
 // Pod Box Component - small box representing a pod
 const PodBox: React.FC<{ 
   pod: PodType; 
   width: number; 
   showName: boolean;
-  onHover?: (cpu: number, memory: number) => void;
+  onHover?: (resources: { [key: string]: number }) => void;
   onHoverEnd?: () => void;
-}> = ({ pod, width, showName, onHover, onHoverEnd }) => {
+  selectedResources?: Set<string>;
+}> = ({ pod, width, showName, onHover, onHoverEnd, selectedResources }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
   const getPhaseColor = (phase: string) => {
@@ -508,8 +559,19 @@ const PodBox: React.FC<{
   const memoryFormatted = formatMemory(effectiveMemory);
 
   const handleMouseEnter = () => {
-    if (onHover) {
-      onHover(effectiveCPU, effectiveMemory);
+    if (onHover && selectedResources) {
+      // Calculate all resources that are currently selected
+      const resources: { [key: string]: number } = {};
+      selectedResources.forEach(resourceName => {
+        if (resourceName === 'cpu') {
+          resources[resourceName] = effectiveCPU;
+        } else if (resourceName === 'memory') {
+          resources[resourceName] = effectiveMemory;
+        } else {
+          resources[resourceName] = calculatePodEffectiveResource(pod, resourceName);
+        }
+      });
+      onHover(resources);
     }
   };
 
@@ -603,9 +665,10 @@ const PodsDisplay: React.FC<{
   pods: PodType[]; 
   showNames: boolean; 
   title: string;
-  onPodHover?: (cpu: number, memory: number) => void;
+  onPodHover?: (resources: { [key: string]: number }) => void;
   onPodHoverEnd?: () => void;
-}> = ({ pods, showNames, title, onPodHover, onPodHoverEnd }) => {
+  selectedResources?: Set<string>;
+}> = ({ pods, showNames, title, onPodHover, onPodHoverEnd, selectedResources }) => {
   if (pods.length === 0) {
     return null;
   }
@@ -669,6 +732,7 @@ const PodsDisplay: React.FC<{
                 showName={showNames}
                 onHover={onPodHover}
                 onHoverEnd={onPodHoverEnd}
+                selectedResources={selectedResources}
               />
             );
           }
@@ -684,6 +748,7 @@ const PodsDisplay: React.FC<{
               showName={showNames}
               onHover={onPodHover}
               onHoverEnd={onPodHoverEnd}
+              selectedResources={selectedResources}
             />
           );
         })}
@@ -729,20 +794,17 @@ const NodeCard: React.FC<{
   resourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } };
   showPodNames: boolean;
 }> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods, selectedResources, resourceUsage, showPodNames }) => {
-  const [hoveredPodCPU, setHoveredPodCPU] = useState<number | undefined>(undefined);
-  const [hoveredPodMemory, setHoveredPodMemory] = useState<number | undefined>(undefined);
+  const [hoveredPodResources, setHoveredPodResources] = useState<{ [key: string]: number }>({});
 
   const totalCPUs = parseCPUQuantity(node.status?.capacity?.cpu || '0');
   const totalMemory = parseMemoryQuantity(node.status?.capacity?.memory || '0');
 
-  const handlePodHover = (cpu: number, memory: number) => {
-    setHoveredPodCPU(cpu);
-    setHoveredPodMemory(memory);
+  const handlePodHover = (resources: { [key: string]: number }) => {
+    setHoveredPodResources(resources);
   };
 
   const handlePodHoverEnd = () => {
-    setHoveredPodCPU(undefined);
-    setHoveredPodMemory(undefined);
+    setHoveredPodResources({});
   };
 
   // Separate pods into regular and system pods
@@ -800,7 +862,7 @@ const NodeCard: React.FC<{
             requestedCPUs={requestedCPUs}
             limitedCPUs={limitedCPUs}
             nodeName={node.metadata.name}
-            hoveredPodCPU={hoveredPodCPU}
+            hoveredPodCPU={hoveredPodResources['cpu']}
           />
         )}
         {selectedResources.has('memory') && (
@@ -809,7 +871,7 @@ const NodeCard: React.FC<{
             requestedMemory={requestedMemory}
             limitedMemory={limitedMemory}
             nodeName={node.metadata.name}
-            hoveredPodMemory={hoveredPodMemory}
+            hoveredPodMemory={hoveredPodResources['memory']}
           />
         )}
         {Array.from(selectedResources)
@@ -834,6 +896,7 @@ const NodeCard: React.FC<{
                 nodeName={node.metadata.name}
                 label={`Effective ${resource.charAt(0).toUpperCase() + resource.slice(1)}`}
                 formatValue={(value) => formatGenericResource(value, resource)}
+                hoveredValue={hoveredPodResources[resource]}
               />
             );
           })}
@@ -843,6 +906,7 @@ const NodeCard: React.FC<{
           title="Pods"
           onPodHover={handlePodHover}
           onPodHoverEnd={handlePodHoverEnd}
+          selectedResources={selectedResources}
         />
         <PodsDisplay 
           pods={systemPods} 
@@ -850,6 +914,7 @@ const NodeCard: React.FC<{
           title="System Pods"
           onPodHover={handlePodHover}
           onPodHoverEnd={handlePodHoverEnd}
+          selectedResources={selectedResources}
         />
       </CardBody>
     </Card>
