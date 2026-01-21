@@ -1882,12 +1882,17 @@ const SchedulerPage: React.FC = () => {
         gap: '1rem',
         flexWrap: 'wrap'
       }}>
-        <Title headingLevel="h1" style={{
-          margin: 0,
-          flex: '0 0 auto'
-        }}>
-          Cluster Scheduler Overview
-        </Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Title headingLevel="h1" style={{
+            margin: 0,
+            flex: '0 0 auto'
+          }}>
+            Cluster Scheduler Overview
+          </Title>
+          <Label color="orange" style={{ color: 'white' }}>
+            Experimental
+          </Label>
+        </div>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {nodesLoaded && availableNamespaces.length > 0 && (
             <ProjectSelector

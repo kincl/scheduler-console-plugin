@@ -35,7 +35,7 @@ fi
 
 echo "API Server: $BRIDGE_K8S_MODE_OFF_CLUSTER_ENDPOINT"
 echo "Console Image: $CONSOLE_IMAGE"
-echo "Console URL: http://rhel9:${CONSOLE_PORT}"
+# echo "Console URL: http://rhel9:${CONSOLE_PORT}"
 echo "Console Platform: $CONSOLE_IMAGE_PLATFORM"
 
 
