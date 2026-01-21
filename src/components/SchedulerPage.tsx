@@ -1407,6 +1407,7 @@ const ResourceSelector: React.FC<{
             maxHeight: '300px',
             overflowY: 'auto',
             overflowX: 'hidden',
+            backgroundColor: 'var(--pf-v5-global--BackgroundColor--100, var(--pf-global--BackgroundColor--100, #fff))',
             boxShadow: '0 0.5rem 1rem 0 rgba(3, 3, 3, 0.16), 0 0 0.375rem 0 rgba(3, 3, 3, 0.08)',
             borderRadius: 'var(--pf-global--BorderRadius--sm)',
             zIndex: 9999,
@@ -1416,9 +1417,13 @@ const ResourceSelector: React.FC<{
         >
           <style>{`
             .resource-dropdown {
+              background-color: #fff;
+              background-color: var(--pf-global--BackgroundColor--100, #fff);
               background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
             }
             .pf-theme-dark .resource-dropdown {
+              background-color: #212427;
+              background-color: var(--pf-global--BackgroundColor--100, #212427);
               background-color: var(--pf-v5-global--BackgroundColor--100, #212427);
             }
             .resource-dropdown::-webkit-scrollbar {
@@ -1603,6 +1608,7 @@ const ProjectSelector: React.FC<{
             maxHeight: '400px',
             display: 'flex',
             flexDirection: 'column',
+            backgroundColor: 'var(--pf-v5-global--BackgroundColor--100, var(--pf-global--BackgroundColor--100, #fff))',
             boxShadow: '0 0.5rem 1rem 0 rgba(3, 3, 3, 0.16), 0 0 0.375rem 0 rgba(3, 3, 3, 0.08)',
             borderRadius: 'var(--pf-global--BorderRadius--sm)',
             zIndex: 9999,
@@ -1613,9 +1619,13 @@ const ProjectSelector: React.FC<{
           <style>
             {`
             .project-dropdown {
+              background-color: #fff;
+              background-color: var(--pf-global--BackgroundColor--100, #fff);
               background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
             }
             .pf-theme-dark .project-dropdown {
+              background-color: #212427;
+              background-color: var(--pf-global--BackgroundColor--100, #212427);
               background-color: var(--pf-v5-global--BackgroundColor--100, #212427);
             }
             .project-dropdown::-webkit-scrollbar {
