@@ -1342,33 +1342,32 @@ const ResourceSelector: React.FC<{
             maxHeight: '300px',
             overflowY: 'auto',
             overflowX: 'hidden',
-            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 0.5rem 1rem 0 rgba(3, 3, 3, 0.16), 0 0 0.375rem 0 rgba(3, 3, 3, 0.08)',
             borderRadius: 'var(--pf-global--BorderRadius--sm)',
             zIndex: 9999,
             padding: 0,
-            border: '1px solid var(--pf-global--BorderColor--100)',
-            backgroundColor: '#ffffff'
+            border: '1px solid var(--pf-global--BorderColor--100)'
           }}
         >
           <style>{`
-            .pf-theme-dark .resource-dropdown {
-              background-color: #1f1f1f !important;
+            .resource-dropdown {
+              background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
             }
-            .pf-theme-dark .resource-dropdown::-webkit-scrollbar-track {
-              background: #1f1f1f;
+            .pf-theme-dark .resource-dropdown {
+              background-color: var(--pf-v5-global--BackgroundColor--100, #212427);
             }
             .resource-dropdown::-webkit-scrollbar {
-              width: 12px;
+              width: 8px;
             }
             .resource-dropdown::-webkit-scrollbar-track {
-              background: #ffffff;
+              background: transparent;
             }
             .resource-dropdown::-webkit-scrollbar-thumb {
-              background: var(--pf-global--BackgroundColor--300);
-              border-radius: 6px;
+              background: var(--pf-global--palette--black-400);
+              border-radius: 4px;
             }
             .resource-dropdown::-webkit-scrollbar-thumb:hover {
-              background: var(--pf-global--BackgroundColor--400);
+              background: var(--pf-global--palette--black-500);
             }
           `}</style>
           {availableResources.map(resource => {
@@ -1539,48 +1538,46 @@ const ProjectSelector: React.FC<{
             maxHeight: '400px',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 0.5rem 1rem 0 rgba(3, 3, 3, 0.16), 0 0 0.375rem 0 rgba(3, 3, 3, 0.08)',
             borderRadius: 'var(--pf-global--BorderRadius--sm)',
             zIndex: 9999,
             padding: 0,
-            border: '1px solid var(--pf-global--BorderColor--100)',
-            backgroundColor: '#ffffff'
+            border: '1px solid var(--pf-global--BorderColor--100)'
           }}
         >
           <style>
             {`
-            .pf-theme-dark .project-dropdown {
-              background-color: #1f1f1f !important;
+            .project-dropdown {
+              background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
             }
-            .pf-theme-dark .project-dropdown::-webkit-scrollbar-track,
-            .pf-theme-dark .project-dropdown-list::-webkit-scrollbar-track {
-              background: #1f1f1f;
+            .pf-theme-dark .project-dropdown {
+              background-color: var(--pf-v5-global--BackgroundColor--100, #212427);
             }
             .project-dropdown::-webkit-scrollbar {
-              width: 12px;
+              width: 8px;
             }
             .project-dropdown::-webkit-scrollbar-track {
-              background: #ffffff;
+              background: transparent;
             }
             .project-dropdown::-webkit-scrollbar-thumb {
-              background: var(--pf-global--BackgroundColor--300);
-              border-radius: 6px;
+              background: var(--pf-global--palette--black-400);
+              border-radius: 4px;
             }
             .project-dropdown::-webkit-scrollbar-thumb:hover {
-              background: var(--pf-global--BackgroundColor--400);
+              background: var(--pf-global--palette--black-500);
             }
             .project-dropdown-list::-webkit-scrollbar {
-              width: 12px;
+              width: 8px;
             }
             .project-dropdown-list::-webkit-scrollbar-track {
-              background: #ffffff;
+              background: transparent;
             }
             .project-dropdown-list::-webkit-scrollbar-thumb {
-              background: var(--pf-global--BackgroundColor--300);
-              border-radius: 6px;
+              background: var(--pf-global--palette--black-400);
+              border-radius: 4px;
             }
             .project-dropdown-list::-webkit-scrollbar-thumb:hover {
-              background: var(--pf-global--BackgroundColor--400);
+              background: var(--pf-global--palette--black-500);
             }
           `}
           </style>
