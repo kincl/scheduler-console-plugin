@@ -1,11 +1,11 @@
 ---
 plugin:
-  name: ""
-  description: ""
-  image: ""
+  name: "scheduler-console-plugin"
+  description: "Scheduler plugin for visualizing the scheduler in OpenShift Console"
+  image: "ghcr.io/kincl/scheduler-console-plugin:main"
   imagePullPolicy: IfNotPresent
   imagePullSecrets: []
-  replicas: 2
+  replicas: 1
   port: 9443
   securityContext:
     enabled: true
