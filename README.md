@@ -1,69 +1,62 @@
-# OpenShift Console Plugin Template
+# OpenShift Scheduler Console Plugin
 
-This project is a minimal template for writing a new OpenShift Console dynamic
-plugin.
+An OpenShift Console dynamic plugin that provides real-time visualization of cluster resource utilization and pod scheduling across nodes.
 
-[Dynamic plugins](https://github.com/openshift/console/tree/master/frontend/packages/console-dynamic-plugin-sdk)
-allow you to extend the
-[OpenShift UI](https://github.com/openshift/console)
-at runtime, adding custom pages and other extensions. They are based on
-[webpack module federation](https://webpack.js.org/concepts/module-federation/).
-Plugins are registered with console using the `ConsolePlugin` custom resource
-and enabled in the console operator config by a cluster administrator.
+## Overview
 
-Using the latest `v1` API version of `ConsolePlugin` CRD, requires OpenShift 4.12
-and higher. For using old `v1alpha1` API version us OpenShift version 4.10 or 4.11.
+This plugin adds a **Cluster Scheduler Overview** page to the OpenShift web console under the **Observe** section. It provides cluster administrators and operators with an intuitive, visual representation of:
 
-For an example of a plugin that works with OpenShift 4.11, see the `release-4.11` branch.
-For a plugin that works with OpenShift 4.10, see the `release-4.10` branch.
+- **Node resource utilization** (CPU, memory, and other capacity resources)
+- **Pod distribution** across nodes
+- **Scheduling pressure** - unscheduled pods and their resource requirements
+- **Node health status** and conditions
+- **System vs. workload pods** separation
+
+## Features
+
+### Resource Visualization
+
+- **Effective resource calculation**: Shows the maximum of requested and limited resources to represent actual scheduling constraints
+- **Multiple resource types**: CPU, memory, pods, ephemeral-storage, and any other node capacity resources
+- **Color-coded indicators**: Green (healthy), yellow (warning), and red (critical) utilization levels
+- **Pod sizing**: Visual representation of pod resource requirements with proportional sizing
+
+### Flexible Filtering
+
+- **Project/Namespace filtering**: Filter pods by namespace with multi-select search capability
+- **Resource selection**: Choose which capacity resources to display (CPU, memory, pods, etc.)
+- **Node filtering**: Option to hide nodes without workloads
+- **View modes**: Toggle between detailed card view and compact grid view
+
+### Scheduling Insights
+
+- **Scheduling pressure monitoring**: Highlights unscheduled pods with failure reasons
+- **Node role grouping**: Organizes nodes by roles (master, worker, etc.) in compact view
+- **Pod status indicators**: Visual representation of pod phases (Running, Pending, Failed, etc.)
+- **System pod separation**: Distinguishes between user workloads and OpenShift/Kubernetes system pods
+
+### User Experience
+
+- **Real-time updates**: Leverages OpenShift's dynamic plugin SDK to watch for cluster changes
+- **Interactive tooltips**: Hover over pods and nodes for detailed information
+- **Compact visualization**: Efficient use of screen space with resizable elements
+- **Pod name display**: Optional toggle to show pod names on visualization blocks
+
+## Use Cases
+
+- **Capacity planning**: Identify overutilized nodes and available capacity
+- **Troubleshooting**: Quickly spot unscheduled pods and resource bottlenecks
+- **Resource optimization**: Understand actual vs. requested resource utilization
+- **Cluster health monitoring**: Track node conditions and pod distribution
+
+## Requirements
 
 [Node.js](https://nodejs.org/en/) and [yarn](https://yarnpkg.com) are required
-to build and run the example. To run OpenShift console in a container, either
+to build and run the plugin. To run OpenShift console in a container, either
 [Docker](https://www.docker.com) or [podman 3.2.0+](https://podman.io) and
 [oc](https://console.redhat.com/openshift/downloads) are required.
 
-## Getting started
-
-> [!IMPORTANT]  
-> To use this template, **DO NOT FORK THIS REPOSITORY**! Click **Use this template**, then select
-> [**Create a new repository**](https://github.com/new?template_name=networking-console-plugin&template_owner=openshift)
-> to create a new repository.
->
-> ![A screenshot showing where the "Use this template" button is located](https://i.imgur.com/AhaySbU.png)
->
-> **Forking this repository** for purposes outside of contributing to this repository
-> **will cause issues**, as users cannot have more than one fork of a template repository
-> at a time. This could prevent future users from forking and contributing to your plugin.
-> 
-> Your fork would also behave like a template repository, which might be confusing for
-> contributiors, because it is not possible for repositories generated from a template
-> repository to contribute back to the template.
-
-After cloning your instantiated repository, you must update the plugin metadata, such as the
-plugin name in the `consolePlugin` declaration of [package.json](package.json).
-
-```json
-"consolePlugin": {
-  "name": "console-plugin-template",
-  "version": "0.0.1",
-  "displayName": "My Plugin",
-  "description": "Enjoy this shiny, new console plugin!",
-  "exposedModules": {
-    "ExamplePage": "./components/ExamplePage"
-  },
-  "dependencies": {
-    "@console/pluginAPI": "*"
-  }
-}
-```
-
-The template adds a single example page in the Home navigation section. The
-extension is declared in the [console-extensions.json](console-extensions.json)
-file and the React component is declared in
-[src/components/ExamplePage.tsx](src/components/ExamplePage.tsx).
-
-You can run the plugin using a local development environment or build an image
-to deploy it to a cluster.
+The plugin uses the `v1` API version of `ConsolePlugin` CRD, requiring OpenShift 4.12 or higher.
 
 ## Development
 
