@@ -38,9 +38,26 @@ echo "Console Image: $CONSOLE_IMAGE"
 # echo "Console URL: http://rhel9:${CONSOLE_PORT}"
 echo "Console Platform: $CONSOLE_IMAGE_PLATFORM"
 
+# Automatically detect the primary IP address of the default route's interface
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    DEFAULT_INTERFACE=$(route -n get default 2>/dev/null | grep interface | awk '{print $2}')
+    HOST_IP=$(ipconfig getifaddr "$DEFAULT_INTERFACE" 2>/dev/null)
+else
+    # Linux
+    DEFAULT_INTERFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
+    HOST_IP=$(ip addr show "$DEFAULT_INTERFACE" 2>/dev/null | grep "inet " | awk '{print $2}' | cut -d/ -f1 | head -n1)
+fi
 
-BRIDGE_PLUGINS="${PLUGIN_NAME}=http://192.168.4.92:9001"
-export CONTAINER_HOST="ssh://jason@rhel9-local:22/run/user/1001/podman/podman.sock"
+if [ -z "$HOST_IP" ]; then
+    echo "Warning: Could not automatically detect host IP. Falling back to localhost."
+    HOST_IP="127.0.0.1"
+else
+    echo "Detected Host IP: $HOST_IP"
+fi
+
+BRIDGE_PLUGINS="${PLUGIN_NAME}=http://${HOST_IP}:9001"
+
 podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --network=host --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
 
 # # Prefer podman if installed. Otherwise, fall back to docker.
