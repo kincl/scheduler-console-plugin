@@ -10,8 +10,8 @@
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "scheduler",
-      "name": "Scheduler",
+      "id": "scheduling",
+      "name": "Scheduling",
       "href": "/scheduler",
       "perspective": "admin",
       "section": "observe"
