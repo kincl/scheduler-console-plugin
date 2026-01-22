@@ -29,8 +29,8 @@ export const EffectiveCPUBar: React.FC<{
         alignItems: 'center',
         marginBottom: '0.25rem'
       }}>
-        <span style={{ fontSize: '0.7rem' }}>Effective CPU</span>
-        <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
+        <span>Effective CPU</span>
+        <span style={{ color: '#6A6E73' }}>
           {effectiveCPUs.toFixed(2)} / {totalCPUs.toFixed(2)} cores
         </span>
       </div>
@@ -107,8 +107,8 @@ export const EffectiveMemoryBar: React.FC<{
         alignItems: 'center',
         marginBottom: '0.25rem'
       }}>
-        <span style={{ fontSize: '0.7rem' }}>Effective Memory</span>
-        <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
+        <span>Effective Memory</span>
+        <span style={{ color: '#6A6E73' }}>
           {usedFormatted.value} {usedFormatted.unit} / {totalFormatted.value} {totalFormatted.unit}
         </span>
       </div>
@@ -180,8 +180,8 @@ export const GenericResourceBar: React.FC<{
         alignItems: 'center',
         marginBottom: '0.25rem'
       }}>
-        <span style={{ fontSize: '0.7rem' }}>{label}</span>
-        <span style={{ fontSize: '0.7rem', color: '#6A6E73' }}>
+        <span>{label}</span>
+        <span style={{ color: '#6A6E73' }}>
           {formatValue(used)} / {formatValue(total)}
         </span>
       </div>

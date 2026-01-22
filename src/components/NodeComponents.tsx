@@ -22,7 +22,7 @@ export const NodeRoles: React.FC<{ node: NodeType }> = ({ node }) => {
         <Label
           key={role}
           color="blue"
-          style={{ fontSize: '0.7rem' }}
+          style={{}}
         >
           {role}
         </Label>
@@ -81,7 +81,7 @@ export const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
         <Label
           key={condition.type}
           color={getConditionColor(condition.type, condition.status)}
-          style={{ fontSize: '0.7rem' }}
+          style={{}}
           title={condition.message || condition.reason || `${condition.type}: ${condition.status}`}
         >
           {getConditionLabel(condition.type)}

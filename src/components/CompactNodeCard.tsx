@@ -90,7 +90,6 @@ export const CompactNodeCard: React.FC<{
               style={{
                 backgroundColor: 'var(--pf-global--BackgroundColor--200)',
                 color: 'var(--pf-global--Color--100)',
-                fontSize: '0.65rem',
                 padding: '0.125rem 0.25rem',
                 borderRadius: '3px',
                 border: '1px solid var(--pf-global--BorderColor--100)'
@@ -105,7 +104,6 @@ export const CompactNodeCard: React.FC<{
       {/* Resource usage */}
       <div style={{
         color: 'var(--pf-global--Color--100)',
-        fontSize: '0.75rem',
         textAlign: 'center',
         marginBottom: '0.5rem'
       }}>
@@ -115,7 +113,7 @@ export const CompactNodeCard: React.FC<{
         <div style={{ marginBottom: '0.25rem' }}>
           <strong>Memory:</strong> {memoryPercentage.toFixed(1)}%
         </div>
-        <div style={{ marginTop: '0.25rem', fontSize: '0.7rem' }}>
+          <strong>Memory:</strong> {memoryPercentage.toFixed(1)}%
           Pods: {pods.length}
         </div>
       </div>

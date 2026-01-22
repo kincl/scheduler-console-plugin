@@ -405,7 +405,6 @@ const SchedulerPage: React.FC = () => {
                         <div key={roleKey} style={{ marginBottom: '2rem', width: '100%' }}>
                           {/* Role header */}
                           <div style={{
-                            fontSize: '1.2rem',
                             marginBottom: '1rem',
                             paddingBottom: '0.5rem',
                             borderBottom: '2px solid #D1D1D1',
@@ -418,14 +417,14 @@ const SchedulerPage: React.FC = () => {
                                 <span>
                                   {group.roles.map(role => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
                                 </span>
-                                <span style={{ fontSize: '0.9rem', color: '#6A6E73', fontWeight: 'normal' }}>
+                                <span style={{ color: '#6A6E73', fontWeight: 'normal' }}>
                                   ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
                                 </span>
                               </>
                             ) : (
                               <>
                                 <span>No Role</span>
-                                <span style={{ fontSize: '0.9rem', color: '#6A6E73', fontWeight: 'normal' }}>
+                                <span style={{ color: '#6A6E73', fontWeight: 'normal' }}>
                                   ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
                                 </span>
                               </>

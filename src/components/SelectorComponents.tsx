@@ -22,7 +22,6 @@ export const ResourceSelector: React.FC<{
       const tempElement = document.createElement('span');
       tempElement.style.visibility = 'hidden';
       tempElement.style.position = 'absolute';
-      tempElement.style.fontSize = '0.875rem';
       tempElement.style.padding = '0 1rem';
       document.body.appendChild(tempElement);
 
@@ -184,7 +183,6 @@ export const ResourceSelector: React.FC<{
                   style={{
                     cursor: 'pointer',
                     flex: 1,
-                    fontSize: '0.875rem',
                     fontWeight: 'normal',
                     margin: 0,
                     width: '100%',
@@ -378,14 +376,14 @@ export const ProjectSelector: React.FC<{
             <Button
               variant="link"
               onClick={onSelectAll}
-              style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+              style={{ padding: '0.25rem 0.5rem' }}
             >
               Select All
             </Button>
             <Button
               variant="link"
               onClick={onClearAll}
-              style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+              style={{ padding: '0.25rem 0.5rem' }}
             >
               Clear All
             </Button>
@@ -403,8 +401,7 @@ export const ProjectSelector: React.FC<{
               <div style={{
                 padding: '1rem',
                 textAlign: 'center',
-                color: 'var(--pf-global--Color--100)',
-                fontSize: '0.875rem'
+                color: 'var(--pf-global--Color--100)'
               }}>
                 No projects found
               </div>
@@ -455,7 +452,6 @@ export const ProjectSelector: React.FC<{
                       style={{
                         cursor: 'pointer',
                         flex: 1,
-                        fontSize: '0.875rem',
                         fontWeight: 'normal',
                         margin: 0,
                         width: '100%',

@@ -61,7 +61,7 @@ export const PodBox: React.FC<{
   };
 
   const podContent = (
-    <div style={{ fontSize: '0.8rem' }}>
+    <div>
       <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
         <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Name:</span>
         <span style={{ wordBreak: 'break-word' }}>{pod.metadata.name}</span>
@@ -118,7 +118,6 @@ export const PodBox: React.FC<{
         {showName && (
           <span style={{
             color: '#ffffff',
-            fontSize: '0.65rem',
             textAlign: 'center',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -185,7 +184,6 @@ export const PodsDisplay: React.FC<{
       borderTop: '1px solid #D1D1D1'
     }}>
       <div style={{
-        fontSize: '0.7rem',
         marginBottom: '0.5rem',
         color: '#6A6E73'
       }}>
@@ -246,7 +244,7 @@ export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showNa
   };
 
   const podContent = (
-    <div style={{ fontSize: '0.8rem' }}>
+    <div>
       <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
         <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Name:</span>
         <span style={{ wordBreak: 'break-word' }}>{pod.metadata.name}</span>
@@ -305,7 +303,6 @@ export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showNa
         {showName && (
           <span style={{
             color: '#ffffff',
-            fontSize: '0.65rem',
             textAlign: 'center',
             overflow: 'hidden',
             textOverflow: 'ellipsis',

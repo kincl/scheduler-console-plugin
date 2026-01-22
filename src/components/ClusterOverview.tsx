@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Card, CardTitle, CardBody } from '@patternfly/react-core';
+import { Chart, ChartAxis, ChartBar, ChartThemeColor } from '@patternfly/react-charts';
 import { NodeType, PodType } from './types';
 import { isValidNode, isValidPod, parseCPUQuantity, parseMemoryQuantity, parseGenericResource, formatMemory, getSchedulingFailureReason } from './utils';
 import { SchedulingPressure } from './SchedulingComponents';
@@ -16,7 +17,7 @@ const ProgressBar: React.FC<{ percentage: number; label: string }> = ({ percenta
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-      <span style={{ minWidth: '70px', fontSize: '0.875rem' }}>{label}:</span>
+      <span style={{ minWidth: '70px' }}>{label}:</span>
       <div style={{
         display: 'flex',
         gap: '2px',
@@ -42,7 +43,7 @@ const ProgressBar: React.FC<{ percentage: number; label: string }> = ({ percenta
             minWidth: percentage > 0 ? '2px' : '0'
           }} />
         </div>
-        <span style={{ minWidth: '45px', fontSize: '0.875rem', textAlign: 'right' }}>
+        <span style={{ minWidth: '45px', textAlign: 'right' }}>
           {Math.round(percentage)}%
         </span>
       </div>
@@ -234,64 +235,81 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
         gap: '1.5rem',
         alignItems: 'start'
       }}>
-          {/* Left Column - Cluster Overview */}
-          <Card style={{ height: 'fit-content', maxHeight: '100%', overflow: 'visible' }}>
-            <CardTitle style={{
-              fontSize: '1rem',
-              fontWeight: 'bold',
-              marginBottom: '0.75rem',
-              paddingBottom: '0.5rem',
-              borderBottom: '1px solid var(--pf-global--BorderColor--100)'
-            }}>
-              Cluster Overview
-            </CardTitle>
-            <CardBody style={{ maxHeight: 'none', overflow: 'visible', padding: '1rem' }}>
-              <div style={{ fontSize: '0.875rem', lineHeight: '1.8' }}>
-              <div style={{ marginBottom: '0.25rem' }}>
-                Total Nodes: <strong>{clusterStats.totalNodes}</strong>    Schedulable: <strong>{clusterStats.schedulableNodes}</strong>
-              </div>
-              <div style={{ marginBottom: '0.5rem' }}>
-                Total Pods: <strong>{clusterStats.totalPods.toLocaleString()}</strong>  Running: <strong>{clusterStats.runningPods.toLocaleString()}</strong>
-              </div>
-              {Array.from(selectedResources).map(resourceName => {
-                const stats = clusterStats.resourceStats[resourceName];
-                if (!stats) return null;
-                // Capitalize first letter for display
-                const label = resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
+          {/* Left Column - Overview and Resources */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Overview Card */}
+            <Card>
+              <CardTitle style={{
+                fontWeight: 'bold',
+                marginBottom: '0.75rem',
+                paddingBottom: '0.5rem',
+                borderBottom: '1px solid var(--pf-global--BorderColor--100)'
+              }}>
+                Overview
+              </CardTitle>
+              <CardBody style={{ padding: '1rem' }}>
+                <div style={{ lineHeight: '1.8' }}>
+                  <div style={{ marginBottom: '0.25rem' }}>
+                    Total Nodes: <strong>{clusterStats.totalNodes}</strong>    Schedulable: <strong>{clusterStats.schedulableNodes}</strong>
+                  </div>
+                  <div>
+                    Total Pods: <strong>{clusterStats.totalPods.toLocaleString()}</strong>  Running: <strong>{clusterStats.runningPods.toLocaleString()}</strong>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
 
-                // Format values based on resource type
-                let usedDisplay = '';
-                let totalDisplay = '';
-                if (resourceName === 'cpu') {
-                  usedDisplay = stats.used.toFixed(1);
-                  totalDisplay = stats.total.toFixed(1);
-                } else if (resourceName === 'memory') {
-                  const usedMem = formatMemory(stats.used);
-                  const totalMem = formatMemory(stats.total);
-                  usedDisplay = `${usedMem.value}${usedMem.unit}`;
-                  totalDisplay = `${totalMem.value}${totalMem.unit}`;
-                } else {
-                  usedDisplay = stats.used.toFixed(1);
-                  totalDisplay = stats.total.toFixed(1);
-                }
+            {/* Resource Cards */}
+            {Array.from(selectedResources).map(resourceName => {
+              const stats = clusterStats.resourceStats[resourceName];
+              if (!stats) return null;
+              // Capitalize first letter for display (special case for CPU)
+              const label = resourceName.toLowerCase() === 'cpu' 
+                ? 'CPU' 
+                : resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
 
-                return (
-                  <div key={resourceName} style={{ marginBottom: '0.6rem' }}>
+              // Format values based on resource type
+              let usedDisplay = '';
+              let totalDisplay = '';
+              if (resourceName === 'cpu') {
+                usedDisplay = stats.used.toFixed(1);
+                totalDisplay = stats.total.toFixed(1);
+              } else if (resourceName === 'memory') {
+                const usedMem = formatMemory(stats.used);
+                const totalMem = formatMemory(stats.total);
+                usedDisplay = `${usedMem.value}${usedMem.unit}`;
+                totalDisplay = `${totalMem.value}${totalMem.unit}`;
+              } else {
+                usedDisplay = stats.used.toFixed(1);
+                totalDisplay = stats.total.toFixed(1);
+              }
+
+              return (
+                <Card key={resourceName}>
+                  <CardTitle style={{
+                    fontWeight: 'bold',
+                    marginBottom: '0.75rem',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '1px solid var(--pf-global--BorderColor--100)'
+                  }}>
+                    {label}
+                  </CardTitle>
+                  <CardBody style={{ padding: '1rem' }}>
                     <ProgressBar
                       percentage={stats.percentage}
                       label={label}
                     />
-                    <div style={{ fontSize: '0.75rem', color: 'var(--pf-global--Color--200)', marginTop: '0.25rem', marginLeft: '78px' }}>
+                    <div style={{ color: 'var(--pf-global--Color--200)', marginTop: '0.25rem', marginLeft: '78px' }}>
                       {usedDisplay} / {totalDisplay} ({stats.percentage.toFixed(1)}%)
                     </div>
 
                     {/* Percentiles and Distribution */}
-                    <div style={{ fontSize: '0.7rem', color: 'var(--pf-global--Color--200)', marginTop: '0.5rem', marginLeft: '78px' }}>
+                    <div style={{ color: 'var(--pf-global--Color--200)', marginTop: '1rem' }}>
                       <div style={{
                         display: 'flex',
                         flexDirection: 'row',
                         flexWrap: 'wrap',
-                        gap: '0.6rem'
+                        gap: '1.5rem'
                       }}>
                         {/* Percentiles Table */}
                         <div style={{ minWidth: '280px', flex: '1 1 280px' }}>
@@ -300,8 +318,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                           </div>
                           <table style={{
                             width: '100%',
-                            borderCollapse: 'collapse',
-                            fontSize: '0.65rem'
+                            borderCollapse: 'collapse'
                           }}>
                             <thead>
                               <tr style={{
@@ -380,180 +397,92 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                         </div>
 
                         {/* Distribution Bar Chart */}
-                        <div style={{ minWidth: '280px', flex: '1 1 280px', overflow: 'hidden' }}>
-                          <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                            Distribution:
+                        <div style={{ minWidth: '280px', flex: '1 1 280px', paddingLeft: '1rem' }}>
+                          <div style={{ marginBottom: '2.5rem', fontWeight: 'bold' }}>
+                            Node Resource Distribution:
                           </div>
                           {(() => {
                             const maxCount = Math.max(...Object.values(stats.distribution), 1);
-                            const chartHeight = 100;
-                            const barWidth = 25;
-                            const barGap = 4;
-                            const yAxisWidth = 30;
+                            
+                            // Convert distribution data to PatternFly chart format
+                            const chartData = Object.entries(stats.distribution).map(([range, count]) => ({
+                              x: range,
+                              y: count
+                            }));
 
-                            // Calculate Y-axis tick marks (show 0, max, and a few intermediate values)
+                            // Calculate unique y-axis tick values
                             const numTicks = Math.min(maxCount + 1, 6); // Max 6 ticks
                             const tickStep = maxCount / (numTicks - 1);
-                            const yTicks = [];
+                            const yTickValues: number[] = [];
                             for (let i = 0; i < numTicks; i++) {
-                              yTicks.push(Math.round(i * tickStep));
+                              const tickValue = Math.round(i * tickStep);
+                              // Only add if it's unique
+                              if (yTickValues.length === 0 || tickValue !== yTickValues[yTickValues.length - 1]) {
+                                yTickValues.push(tickValue);
+                              }
                             }
 
+                            // Determine color based on percentage range
+                            const getBarColor = (rangeStr: string, count: number) => {
+                              if (count === 0) return 'var(--pf-global--BorderColor--100)';
+
+                              // Extract the upper bound of the range (e.g., "80-90" -> 90)
+                              const match = rangeStr.match(/(\d+)-(\d+)/);
+                              if (!match) return '#3e8635'; // default to green
+
+                              const upperBound = parseInt(match[2], 10);
+
+                              // Green for 0-50%, Yellow for 50-80%, Red for 80-100%
+                              if (upperBound <= 50) {
+                                return '#3e8635'; // green
+                              } else if (upperBound <= 80) {
+                                return '#f0ab00'; // yellow
+                              } else {
+                                return '#c9190b'; // red
+                              }
+                            };
+
                             return (
-                              <div style={{
-                                display: 'flex',
-                                flexDirection: 'row',
-                                fontSize: '0.65rem',
-                                width: '100%',
-                                minWidth: 0
-                              }}>
-                                {/* Y-axis with labels */}
+                              <div style={{ height: '200px', width: '100%' }}>
+                                <Chart
+                                  domain={{ y: [0, maxCount] }}
+                                  domainPadding={{ x: [10, 10] }}
+                                  height={200}
+                                  padding={{ bottom: 50, left: 50, right: 20, top: 20 }}
+                                  themeColor={ChartThemeColor.multi}
+                                  width={undefined}
+                                >
+                                  <ChartAxis 
+                                    dependentAxis
+                                    showGrid
+                                    tickValues={yTickValues}
+                                    tickFormat={(t) => Math.round(t)}
+                                  />
+                                  <ChartAxis 
+                                    tickFormat={(t) => {
+                                      // Extract the upper bound from range format "0-10" -> "10"
+                                      const match = String(t).match(/(\d+)-(\d+)/);
+                                      if (match) {
+                                        return match[2]; // Return upper bound
+                                      }
+                                      return t;
+                                    }}
+                                  />
+                                  <ChartBar
+                                    data={chartData}
+                                    style={{
+                                      data: {
+                                        fill: ({ datum }) => getBarColor(datum.x, datum.y)
+                                      }
+                                    }}
+                                  />
+                                </Chart>
                                 <div style={{
-                                  width: `${yAxisWidth}px`,
-                                  position: 'relative',
-                                  paddingRight: '0.5rem',
-                                  fontSize: '0.6rem',
-                                  color: 'var(--pf-global--Color--200)',
-                                  textAlign: 'right',
-                                  height: `${chartHeight}px`
+                                  textAlign: 'center',
+                                  marginTop: '0.5rem',
+                                  color: 'var(--pf-global--Color--200)'
                                 }}>
-                                  {yTicks.reverse().map((tick) => {
-                                    // Calculate position from bottom (0 at bottom, maxCount at top)
-                                    // 0.5rem ≈ 8px, so we add that to the calculated position
-                                    const positionFromBottom = (tick / maxCount) * (chartHeight - 20);
-                                    const bottomPosition = 8 + positionFromBottom; // 0.5rem = 8px
-                                    return (
-                                      <div
-                                        key={tick}
-                                        style={{
-                                          position: 'absolute',
-                                          bottom: `${bottomPosition}px`,
-                                          right: '0',
-                                          width: '100%'
-                                        }}
-                                      >
-                                        <span>{tick}</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-
-                                {/* Chart area */}
-                                <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                                  <div style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    fontSize: '0.65rem',
-                                    width: '100%'
-                                  }}>
-                                    {/* Y-axis labels and bars */}
-                                    <div style={{
-                                      display: 'flex',
-                                      alignItems: 'flex-end',
-                                      height: `${chartHeight}px`,
-                                      borderLeft: '1px solid var(--pf-global--BorderColor--100)',
-                                      borderBottom: '1px solid var(--pf-global--BorderColor--100)',
-                                      paddingLeft: '0.5rem',
-                                      paddingBottom: '0.5rem',
-                                      gap: `${barGap}px`,
-                                      position: 'relative',
-                                      width: '100%',
-                                      overflow: 'visible'
-                                    }}>
-                                      {/* Y-axis grid lines */}
-                                      {yTicks.map((tick, idx) => {
-                                        if (idx === 0 || idx === numTicks - 1) return null; // Skip top and bottom
-                                        const yPosition = (chartHeight - 20) * (1 - tick / maxCount);
-                                        return (
-                                          <div
-                                            key={`grid-${tick}`}
-                                            style={{
-                                              position: 'absolute',
-                                              left: 0,
-                                              right: 0,
-                                              top: `${yPosition}px`,
-                                              borderTop: '1px dashed var(--pf-global--BorderColor--100)',
-                                              opacity: 0.3,
-                                              pointerEvents: 'none'
-                                            }}
-                                          />
-                                        );
-                                      })}
-
-                                      {Object.entries(stats.distribution).map(([range, count]) => {
-                                        const barHeight = maxCount > 0 ? (count / maxCount) * (chartHeight - 20) : 0;
-
-                                        // Determine color based on percentage range
-                                        const getBarColor = (rangeStr: string) => {
-                                          if (count === 0) return 'var(--pf-global--BorderColor--100)';
-
-                                          // Extract the upper bound of the range (e.g., "80-90" -> 90)
-                                          // Range format is "0-10", "10-20", etc. (no % sign)
-                                          const match = rangeStr.match(/(\d+)-(\d+)/);
-                                          if (!match) return '#3e8635'; // default to green
-
-                                          const upperBound = parseInt(match[2], 10);
-
-                                          // Green for 0-50%, Yellow for 50-80%, Red for 80-100%
-                                          if (upperBound <= 50) {
-                                            return '#3e8635'; // green
-                                          } else if (upperBound <= 80) {
-                                            return '#f0ab00'; // yellow
-                                          } else {
-                                            return '#c9190b'; // red
-                                          }
-                                        };
-
-                                        return (
-                                          <div
-                                            key={range}
-                                            style={{
-                                              display: 'flex',
-                                              flexDirection: 'column',
-                                              alignItems: 'center',
-                                              flex: '1 1 0',
-                                              minWidth: 0,
-                                              position: 'relative',
-                                              zIndex: 1
-                                            }}
-                                          >
-                                            <div style={{
-                                              width: '100%',
-                                              maxWidth: `${barWidth}px`,
-                                              height: `${barHeight}px`,
-                                              backgroundColor: getBarColor(range),
-                                              minHeight: count > 0 ? '2px' : '0',
-                                              marginBottom: '0.25rem'
-                                            }} />
-                                            <div style={{
-                                              fontSize: '0.6rem',
-                                              color: 'var(--pf-global--Color--200)',
-                                              marginTop: '0.25rem',
-                                              textAlign: 'center',
-                                              transform: 'rotate(-45deg)',
-                                              transformOrigin: 'center',
-                                              whiteSpace: 'nowrap',
-                                              width: '40px',
-                                              marginLeft: '-5px',
-                                              overflow: 'visible'
-                                            }}>
-                                              {range}%
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-
-                                    {/* X-axis label */}
-                                    <div style={{
-                                      textAlign: 'center',
-                                      marginTop: '0.5rem',
-                                      fontSize: '0.65rem',
-                                      color: 'var(--pf-global--Color--200)'
-                                    }}>
-                                      % of Allocatable Resource Requested
-                                    </div>
-                                  </div>
+                                  % of Allocatable Resource Requested
                                 </div>
                               </div>
                             );
@@ -561,17 +490,15 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-              </div>
-            </CardBody>
-          </Card>
+                  </CardBody>
+                </Card>
+              );
+            })}
+          </div>
 
           {/* Right Column - Scheduling Pressure */}
           <Card style={{ height: 'fit-content', maxHeight: '100%', overflow: 'visible' }}>
             <CardTitle style={{
-              fontSize: '1rem',
               fontWeight: 'bold',
               marginBottom: '0.75rem',
               paddingBottom: '0.5rem',
@@ -580,7 +507,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
               Scheduling Pressure
             </CardTitle>
             <CardBody style={{ padding: '1rem' }}>
-              <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+              <div style={{ marginBottom: '0.5rem' }}>
                 Unscheduled Pods: <strong>{clusterStats.unscheduledPods}</strong>
               </div>
               <div style={{ marginTop: '0.5rem' }}>
@@ -591,7 +518,6 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
               {schedulingFailures.length > 0 && (
                 <div style={{ marginTop: '1.5rem' }}>
                   <div style={{
-                    fontSize: '0.875rem',
                     fontWeight: 'bold',
                     marginBottom: '0.5rem',
                     paddingBottom: '0.5rem',
@@ -601,8 +527,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                   </div>
                   <table style={{
                     width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: '0.875rem'
+                    borderCollapse: 'collapse'
                   }}>
                     <thead>
                       <tr style={{

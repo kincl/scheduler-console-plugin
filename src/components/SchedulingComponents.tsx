@@ -58,7 +58,7 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
     return (
       <Card style={cardStyle}>
         <CardBody style={fullWidth ? { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}}>
-          <div style={{ color: 'var(--pf-global--danger-color--100)', fontSize: '0.875rem' }}>
+          <div style={{ color: 'var(--pf-global--danger-color--100)' }}>
             Error loading events: {error.message}
           </div>
         </CardBody>
@@ -80,7 +80,6 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
               padding: '1rem', 
               textAlign: 'center', 
               color: 'var(--pf-global--Color--200)',
-              fontSize: '0.875rem'
             }}>
               No scheduling events found
             </div>
@@ -112,12 +111,11 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
                     <Label
                       color={isWarning ? 'orange' : 'green'}
                       variant="outline"
-                      style={{ fontSize: '0.75rem' }}
+                      style={{}}
                     >
                       {event.reason || 'Unknown'}
                     </Label>
                     <span style={{ 
-                      fontSize: '0.75rem', 
                       color: 'var(--pf-global--Color--200)',
                       whiteSpace: 'nowrap'
                     }}>
@@ -125,7 +123,6 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
                     </span>
                     {event.count && event.count > 1 && (
                       <span style={{ 
-                        fontSize: '0.75rem', 
                         color: '#6A6E73' 
                       }}>
                         ({event.count} times)
@@ -134,7 +131,6 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
                   </div>
                   {event.message && (
                     <div style={{ 
-                      fontSize: '0.875rem', 
                       marginTop: '0.25rem',
                       wordBreak: 'break-word'
                     }}>
@@ -143,7 +139,6 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
                   )}
                   {event.involvedObject && (
                     <div style={{ 
-                      fontSize: '0.75rem', 
                       color: 'var(--pf-global--Color--200)', 
                       marginTop: '0.25rem' 
                     }}>
@@ -179,7 +174,6 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
         padding: '0.75rem',
         backgroundColor: 'var(--pf-global--BackgroundColor--100)',
         borderRadius: '4px',
-        fontSize: '0.875rem',
         color: 'var(--pf-global--Color--200)'
       }}>
         <Label color="green">Scheduling Pressure: None</Label>
@@ -213,8 +207,7 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
     <div style={{ marginTop: '0.5rem' }}>
       <table style={{ 
         width: '100%', 
-        borderCollapse: 'collapse',
-        fontSize: '0.875rem'
+        borderCollapse: 'collapse'
       }}>
         <thead>
           <tr style={{ 

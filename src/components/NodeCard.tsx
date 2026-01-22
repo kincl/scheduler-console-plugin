@@ -62,7 +62,7 @@ export const NodeCard: React.FC<{
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '1rem' }}>
+          <span>
             {node.metadata.name}
           </span>
           <NodeRoles node={node} />
