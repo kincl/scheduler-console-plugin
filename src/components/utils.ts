@@ -194,6 +194,67 @@ export const isValidPod = (pod: any): pod is PodType => {
   );
 };
 
+// Parse scheduling failure message to extract useful information
+export const parseSchedulingFailureMessage = (message: string): string => {
+  if (!message) return 'Unknown reason';
+
+  // Remove the "X/Y nodes are available:" prefix if present
+  let cleaned = message.replace(/^\d+\/\d+\s+nodes\s+are\s+available:\s*/i, '');
+
+  // Split by "preemption:" to get the main reason (preemption info is usually less useful)
+  const parts = cleaned.split(/preemption:/i);
+  cleaned = parts[0].trim();
+
+  // Remove trailing periods and whitespace
+  cleaned = cleaned.replace(/\.+$/, '').trim();
+
+  // If the message contains common patterns, extract the key part
+  // Examples:
+  // - "persistentvolumeclaim "data" not found"
+  // - "1 Insufficient memory"
+  // - "node(s) had taint {key: value}, that the pod didn't tolerate"
+
+  // Extract resource-related errors (PVC, storage, etc.)
+  const pvcMatch = cleaned.match(/persistentvolumeclaim\s+"([^"]+)"\s+(.+?)(?:\.|$)/i);
+  if (pvcMatch) {
+    return `PVC "${pvcMatch[1]}" ${pvcMatch[2]}`;
+  }
+
+  // Extract taint/toleration errors
+  const taintMatch = cleaned.match(/node\(s\)\s+had\s+taint\s+{([^}]+)}/i);
+  if (taintMatch) {
+    return `Taint: ${taintMatch[1]}`;
+  }
+
+  // Extract insufficient resource errors
+  const resourceMatch = cleaned.match(/(\d+)\s+(Insufficient\s+\w+)/i);
+  if (resourceMatch) {
+    return `${resourceMatch[1]} ${resourceMatch[2]}`;
+  }
+
+  // Extract affinity/selector errors
+  const affinityMatch = cleaned.match(/(node\(s\)\s+didn't\s+match\s+[^.]+)/i);
+  if (affinityMatch) {
+    return affinityMatch[1];
+  }
+
+  // If we have a colon, take the part after the last colon (usually the actual reason)
+  const lastColonIndex = cleaned.lastIndexOf(':');
+  if (lastColonIndex > 0 && lastColonIndex < cleaned.length - 1) {
+    const afterColon = cleaned.substring(lastColonIndex + 1).trim();
+    if (afterColon.length > 0 && afterColon.length < cleaned.length) {
+      cleaned = afterColon;
+    }
+  }
+
+  // Limit length to avoid overly long messages
+  if (cleaned.length > 100) {
+    cleaned = cleaned.substring(0, 97) + '...';
+  }
+
+  return cleaned || 'Unknown reason';
+};
+
 // Get scheduling failure reason from pod conditions
 export const getSchedulingFailureReason = (pod: PodType): string | null => {
   if (!pod.status?.conditions) return null;
@@ -204,7 +265,11 @@ export const getSchedulingFailureReason = (pod: PodType): string | null => {
   );
 
   if (podScheduledCondition) {
-    return podScheduledCondition.reason || podScheduledCondition.message || 'Unknown reason';
+    // Use message if available, fallback to reason
+    if (podScheduledCondition.message) {
+      return parseSchedulingFailureMessage(podScheduledCondition.message);
+    }
+    return podScheduledCondition.reason || 'Unknown reason';
   }
 
   return null;

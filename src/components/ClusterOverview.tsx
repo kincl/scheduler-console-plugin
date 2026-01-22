@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardTitle, CardBody } from '@patternfly/react-core';
 import { NodeType, PodType } from './types';
-import { isValidNode, isValidPod, parseCPUQuantity, parseMemoryQuantity, parseGenericResource, formatMemory } from './utils';
+import { isValidNode, isValidPod, parseCPUQuantity, parseMemoryQuantity, parseGenericResource, formatMemory, getSchedulingFailureReason } from './utils';
 import { SchedulingPressure } from './SchedulingComponents';
 
 interface ClusterOverviewProps {
@@ -13,18 +13,18 @@ interface ClusterOverviewProps {
 }
 
 const ProgressBar: React.FC<{ percentage: number; label: string }> = ({ percentage, label }) => {
-  
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
       <span style={{ minWidth: '70px', fontSize: '0.875rem' }}>{label}:</span>
-      <div style={{ 
-        display: 'flex', 
-        gap: '2px', 
+      <div style={{
+        display: 'flex',
+        gap: '2px',
         flex: 1,
         alignItems: 'center'
       }}>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           gap: '2px',
           flex: 1,
           height: '16px',
@@ -70,18 +70,18 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
     }, {} as { [key: string]: number });
 
     // Count unscheduled pods
-    const unscheduledPods = validPodsList.filter(pod => 
+    const unscheduledPods = validPodsList.filter(pod =>
       pod.status.phase === 'Pending' && !pod.spec.nodeName
     );
 
     // Calculate total cluster capacity and usage for selected resources
-    const resourceStats: { 
-      [resourceName: string]: { 
-        total: number; 
-        used: number; 
+    const resourceStats: {
+      [resourceName: string]: {
+        total: number;
+        used: number;
         percentage: number;
         nodePercentages: Array<{ nodeName: string; percentage: number; used: number; total: number }>;
-        percentiles: { 
+        percentiles: {
           p100: { nodeName: string; percentage: number; used: number; total: number } | null;
           p99: { nodeName: string; percentage: number; used: number; total: number } | null;
           p90: { nodeName: string; percentage: number; used: number; total: number } | null;
@@ -90,7 +90,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
           p0: { nodeName: string; percentage: number; used: number; total: number } | null;
         };
         distribution: { [range: string]: number };
-      } 
+      }
     } = {};
 
     selectedResources.forEach(resourceName => {
@@ -103,7 +103,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
         const capacity = node.status?.capacity || {};
         const capacityValue = capacity[resourceName] || '0';
         const nodeName = node.metadata.name;
-        
+
         let nodeTotal = 0;
         // Parse based on resource type
         if (resourceName === 'cpu') {
@@ -113,7 +113,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
         } else {
           nodeTotal = parseGenericResource(capacityValue);
         }
-        
+
         total += nodeTotal;
 
         // Get usage for this node
@@ -140,7 +140,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
 
       // Sort by percentage for percentile calculation
       const sortedPercentages = [...nodePercentages].sort((a, b) => b.percentage - a.percentage);
-      
+
       // Calculate percentiles with node information
       const getPercentile = (p: number) => {
         if (sortedPercentages.length === 0) return null;
@@ -187,7 +187,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
 
       // Calculate overall percentage
       const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
-      
+
       resourceStats[resourceName] = {
         total,
         used,
@@ -208,19 +208,37 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
     };
   }, [nodes, pods, nodeResourceUsage, selectedResources]);
 
+  // Calculate scheduling failures grouped by error reason
+  const schedulingFailures = useMemo(() => {
+    const unscheduledPods = pods.filter(pod =>
+      isValidPod(pod) &&
+      pod.status.phase === 'Pending' &&
+      !pod.spec.nodeName
+    );
+
+    const groups: { [reason: string]: number } = {};
+
+    unscheduledPods.forEach(pod => {
+      const reason = getSchedulingFailureReason(pod) || 'Unknown reason';
+      groups[reason] = (groups[reason] || 0) + 1;
+    });
+
+    return Object.entries(groups).sort((a, b) => b[1] - a[1]);
+  }, [pods]);
+
   return (
     <div style={{ marginBottom: '1rem' }}>
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 0.4fr)', 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 0.4fr)',
         gap: '1.5rem',
         alignItems: 'start'
       }}>
           {/* Left Column - Cluster Overview */}
           <Card style={{ height: 'fit-content', maxHeight: '100%', overflow: 'visible' }}>
-            <CardTitle style={{ 
-              fontSize: '1rem', 
-              fontWeight: 'bold', 
+            <CardTitle style={{
+              fontSize: '1rem',
+              fontWeight: 'bold',
               marginBottom: '0.75rem',
               paddingBottom: '0.5rem',
               borderBottom: '1px solid var(--pf-global--BorderColor--100)'
@@ -240,7 +258,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                 if (!stats) return null;
                 // Capitalize first letter for display
                 const label = resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
-                
+
                 // Format values based on resource type
                 let usedDisplay = '';
                 let totalDisplay = '';
@@ -256,20 +274,20 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                   usedDisplay = stats.used.toFixed(1);
                   totalDisplay = stats.total.toFixed(1);
                 }
-                
+
                 return (
                   <div key={resourceName} style={{ marginBottom: '0.6rem' }}>
-                    <ProgressBar 
-                      percentage={stats.percentage} 
-                      label={label} 
+                    <ProgressBar
+                      percentage={stats.percentage}
+                      label={label}
                     />
                     <div style={{ fontSize: '0.75rem', color: 'var(--pf-global--Color--200)', marginTop: '0.25rem', marginLeft: '78px' }}>
                       {usedDisplay} / {totalDisplay} ({stats.percentage.toFixed(1)}%)
                     </div>
-                    
+
                     {/* Percentiles and Distribution */}
                     <div style={{ fontSize: '0.7rem', color: 'var(--pf-global--Color--200)', marginTop: '0.5rem', marginLeft: '78px' }}>
-                      <div style={{ 
+                      <div style={{
                         display: 'flex',
                         flexDirection: 'row',
                         flexWrap: 'wrap',
@@ -280,13 +298,13 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                           <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
                             Percentiles:
                           </div>
-                          <table style={{ 
-                            width: '100%', 
+                          <table style={{
+                            width: '100%',
                             borderCollapse: 'collapse',
                             fontSize: '0.65rem'
                           }}>
                             <thead>
-                              <tr style={{ 
+                              <tr style={{
                                 borderBottom: '2px solid var(--pf-global--BorderColor--100)',
                                 textAlign: 'left'
                               }}>
@@ -360,7 +378,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                             </tbody>
                           </table>
                         </div>
-                        
+
                         {/* Distribution Bar Chart */}
                         <div style={{ minWidth: '280px', flex: '1 1 280px', overflow: 'hidden' }}>
                           <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
@@ -372,7 +390,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                             const barWidth = 25;
                             const barGap = 4;
                             const yAxisWidth = 30;
-                            
+
                             // Calculate Y-axis tick marks (show 0, max, and a few intermediate values)
                             const numTicks = Math.min(maxCount + 1, 6); // Max 6 ticks
                             const tickStep = maxCount / (numTicks - 1);
@@ -380,17 +398,17 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                             for (let i = 0; i < numTicks; i++) {
                               yTicks.push(Math.round(i * tickStep));
                             }
-                            
+
                             return (
-                              <div style={{ 
-                                display: 'flex', 
+                              <div style={{
+                                display: 'flex',
                                 flexDirection: 'row',
                                 fontSize: '0.65rem',
                                 width: '100%',
                                 minWidth: 0
                               }}>
                                 {/* Y-axis with labels */}
-                                <div style={{ 
+                                <div style={{
                                   width: `${yAxisWidth}px`,
                                   position: 'relative',
                                   paddingRight: '0.5rem',
@@ -405,9 +423,9 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                                     const positionFromBottom = (tick / maxCount) * (chartHeight - 20);
                                     const bottomPosition = 8 + positionFromBottom; // 0.5rem = 8px
                                     return (
-                                      <div 
-                                        key={tick} 
-                                        style={{ 
+                                      <div
+                                        key={tick}
+                                        style={{
                                           position: 'absolute',
                                           bottom: `${bottomPosition}px`,
                                           right: '0',
@@ -419,18 +437,18 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                                     );
                                   })}
                                 </div>
-                                
+
                                 {/* Chart area */}
                                 <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                                  <div style={{ 
-                                    display: 'flex', 
+                                  <div style={{
+                                    display: 'flex',
                                     flexDirection: 'column',
                                     fontSize: '0.65rem',
                                     width: '100%'
                                   }}>
                                     {/* Y-axis labels and bars */}
-                                    <div style={{ 
-                                      display: 'flex', 
+                                    <div style={{
+                                      display: 'flex',
                                       alignItems: 'flex-end',
                                       height: `${chartHeight}px`,
                                       borderLeft: '1px solid var(--pf-global--BorderColor--100)',
@@ -461,21 +479,21 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                                           />
                                         );
                                       })}
-                                      
+
                                       {Object.entries(stats.distribution).map(([range, count]) => {
                                         const barHeight = maxCount > 0 ? (count / maxCount) * (chartHeight - 20) : 0;
-                                        
+
                                         // Determine color based on percentage range
                                         const getBarColor = (rangeStr: string) => {
                                           if (count === 0) return 'var(--pf-global--BorderColor--100)';
-                                          
+
                                           // Extract the upper bound of the range (e.g., "80-90" -> 90)
                                           // Range format is "0-10", "10-20", etc. (no % sign)
                                           const match = rangeStr.match(/(\d+)-(\d+)/);
                                           if (!match) return '#3e8635'; // default to green
-                                          
+
                                           const upperBound = parseInt(match[2], 10);
-                                          
+
                                           // Green for 0-50%, Yellow for 50-80%, Red for 80-100%
                                           if (upperBound <= 50) {
                                             return '#3e8635'; // green
@@ -485,11 +503,11 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                                             return '#c9190b'; // red
                                           }
                                         };
-                                        
+
                                         return (
-                                          <div 
-                                            key={range} 
-                                            style={{ 
+                                          <div
+                                            key={range}
+                                            style={{
                                               display: 'flex',
                                               flexDirection: 'column',
                                               alignItems: 'center',
@@ -507,7 +525,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                                               minHeight: count > 0 ? '2px' : '0',
                                               marginBottom: '0.25rem'
                                             }} />
-                                            <div style={{ 
+                                            <div style={{
                                               fontSize: '0.6rem',
                                               color: 'var(--pf-global--Color--200)',
                                               marginTop: '0.25rem',
@@ -525,9 +543,9 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
                                         );
                                       })}
                                     </div>
-                                    
+
                                     {/* X-axis label */}
-                                    <div style={{ 
+                                    <div style={{
                                       textAlign: 'center',
                                       marginTop: '0.5rem',
                                       fontSize: '0.65rem',
@@ -552,9 +570,9 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
 
           {/* Right Column - Scheduling Pressure */}
           <Card style={{ height: 'fit-content', maxHeight: '100%', overflow: 'visible' }}>
-            <CardTitle style={{ 
-              fontSize: '1rem', 
-              fontWeight: 'bold', 
+            <CardTitle style={{
+              fontSize: '1rem',
+              fontWeight: 'bold',
               marginBottom: '0.75rem',
               paddingBottom: '0.5rem',
               borderBottom: '1px solid var(--pf-global--BorderColor--100)'
@@ -568,6 +586,49 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
               <div style={{ marginTop: '0.5rem' }}>
                 <SchedulingPressure pods={pods} showNames={showPodNames} />
               </div>
+
+              {/* Scheduling Failures Table */}
+              {schedulingFailures.length > 0 && (
+                <div style={{ marginTop: '1.5rem' }}>
+                  <div style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 'bold',
+                    marginBottom: '0.5rem',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '1px solid var(--pf-global--BorderColor--100)'
+                  }}>
+                    Scheduling Failures
+                  </div>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: '0.875rem'
+                  }}>
+                    <thead>
+                      <tr style={{
+                        borderBottom: '2px solid var(--pf-global--BorderColor--100)',
+                        textAlign: 'left'
+                      }}>
+                        <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Error</th>
+                        <th style={{ padding: '0.5rem', fontWeight: 'bold', textAlign: 'right' }}>Count</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schedulingFailures.map(([reason, count], idx) => (
+                        <tr
+                          key={reason}
+                          style={{
+                            borderBottom: idx < schedulingFailures.length - 1 ? '1px solid var(--pf-global--BorderColor--100)' : 'none'
+                          }}
+                        >
+                          <td style={{ padding: '0.5rem', wordBreak: 'break-word' }}>{reason}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}><strong>{count}</strong></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardBody>
           </Card>
         </div>
