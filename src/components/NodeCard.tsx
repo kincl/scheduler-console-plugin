@@ -117,7 +117,7 @@ export const NodeCard: React.FC<{
                 total={total}
                 used={used}
                 nodeName={node.metadata.name}
-                label={`Effective ${resource.charAt(0).toUpperCase() + resource.slice(1)}`}
+                label={`Effective ${resource}`}
                 formatValue={(value) => formatGenericResource(value, resource)}
                 hoveredValue={hoveredPodResources[resource]}
               />

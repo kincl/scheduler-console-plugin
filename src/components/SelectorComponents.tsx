@@ -27,7 +27,7 @@ export const ResourceSelector: React.FC<{
 
       let maxWidth = 200; // minimum width
       availableResources.forEach(resource => {
-        const resourceText = resource.charAt(0).toUpperCase() + resource.slice(1);
+        const resourceText = resource.toLowerCase() === 'cpu' ? 'CPU' : resource.toLowerCase() === 'memory' ? 'Memory' : resource;
         tempElement.textContent = resourceText;
         const textWidth = tempElement.offsetWidth;
         // Add space for checkbox (24px) + margin (0.5rem) + padding (2rem total)
@@ -197,7 +197,7 @@ export const ResourceSelector: React.FC<{
                     onResourceToggle(resource);
                   }}
                 >
-                  {resource.charAt(0).toUpperCase() + resource.slice(1)}
+                  {resource.toLowerCase() === 'cpu' ? 'CPU' : resource.toLowerCase() === 'memory' ? 'Memory' : resource}
                 </label>
               </div>
             );

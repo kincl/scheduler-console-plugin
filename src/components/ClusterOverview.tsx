@@ -263,10 +263,12 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
             {Array.from(selectedResources).map(resourceName => {
               const stats = clusterStats.resourceStats[resourceName];
               if (!stats) return null;
-              // Capitalize first letter for display (special case for CPU)
+              // Capitalize first letter for display (special case for CPU and Memory)
               const label = resourceName.toLowerCase() === 'cpu' 
                 ? 'CPU' 
-                : resourceName.charAt(0).toUpperCase() + resourceName.slice(1);
+                : resourceName.toLowerCase() === 'memory'
+                ? 'Memory'
+                : resourceName;
 
               // Format values based on resource type
               let usedDisplay = '';
