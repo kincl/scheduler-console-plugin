@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { Card, CardTitle, CardBody, Label, Spinner } from '@patternfly/react-core';
 import { PodType, EventType } from './types';
@@ -15,7 +16,7 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
   // Filter for scheduling-related events only
   const schedulingEvents = useMemo(() => {
     if (!events || !Array.isArray(events)) return [];
-    
+
     const schedulingReasons = [
       'FailedScheduling',
       'Scheduled',
@@ -23,8 +24,8 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
     ];
 
     return events
-      .filter(event => 
-        event.reason && schedulingReasons.some(reason => 
+      .filter(event =>
+        event.reason && schedulingReasons.some(reason =>
           event.reason === reason || event.reason.includes(reason)
         )
       )
@@ -40,7 +41,7 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
       .slice(0, 50); // Limit to most recent 50 events
   }, [events]);
 
-  const cardStyle: React.CSSProperties = fullWidth 
+  const cardStyle: React.CSSProperties = fullWidth
     ? { marginBottom: '1rem', width: '100%' }
     : { marginBottom: '1rem', width: '50%', flex: '0 0 50%' };
 
@@ -76,9 +77,9 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
       <CardBody style={{ padding: '1rem' }}>
         <div style={{ maxHeight: fullWidth ? 'none' : '400px', overflowY: fullWidth ? 'visible' : 'auto' }}>
           {schedulingEvents.length === 0 ? (
-            <div style={{ 
-              padding: '1rem', 
-              textAlign: 'center', 
+            <div style={{
+              padding: '1rem',
+              textAlign: 'center',
               color: 'var(--pf-global--Color--200)',
             }}>
               No scheduling events found
@@ -86,11 +87,11 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
           ) : (
             schedulingEvents.map((event, idx) => {
               const eventTime = new Date(
-                event.lastTimestamp || 
-                event.firstTimestamp || 
+                event.lastTimestamp ||
+                event.firstTimestamp ||
                 event.metadata.creationTimestamp
               );
-              const isWarning = event.type === 'Warning' || 
+              const isWarning = event.type === 'Warning' ||
                 (event.reason && event.reason.includes('Failed'));
 
               return (
@@ -101,10 +102,10 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
                     borderBottom: idx < schedulingEvents.length - 1 ? '1px solid var(--pf-global--BorderColor--100)' : 'none',
                   }}
                 >
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.5rem', 
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
                     marginBottom: '0.25rem',
                     flexWrap: 'wrap'
                   }}>
@@ -115,22 +116,22 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
                     >
                       {event.reason || 'Unknown'}
                     </Label>
-                    <span style={{ 
+                    <span style={{
                       color: 'var(--pf-global--Color--200)',
                       whiteSpace: 'nowrap'
                     }}>
                       {eventTime.toLocaleTimeString()}
                     </span>
                     {event.count && event.count > 1 && (
-                      <span style={{ 
-                        color: '#6A6E73' 
+                      <span style={{
+                        color: '#6A6E73'
                       }}>
                         ({event.count} times)
                       </span>
                     )}
                   </div>
                   {event.message && (
-                    <div style={{ 
+                    <div style={{
                       marginTop: '0.25rem',
                       wordBreak: 'break-word'
                     }}>
@@ -138,12 +139,12 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
                     </div>
                   )}
                   {event.involvedObject && (
-                    <div style={{ 
-                      color: 'var(--pf-global--Color--200)', 
-                      marginTop: '0.25rem' 
+                    <div style={{
+                      color: 'var(--pf-global--Color--200)',
+                      marginTop: '0.25rem'
                     }}>
                       {event.involvedObject.kind}/{event.involvedObject.name}
-                      {event.involvedObject.namespace && 
+                      {event.involvedObject.namespace &&
                         ` in ${event.involvedObject.namespace}`
                       }
                     </div>
@@ -170,7 +171,7 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
 
   if (unscheduledPods.length === 0) {
     return (
-      <div style={{ 
+      <div style={{
         padding: '0.75rem',
         backgroundColor: 'var(--pf-global--BackgroundColor--100)',
         borderRadius: '4px',
@@ -188,7 +189,7 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
   const getTimeSinceCreated = (pod: PodType): string => {
     const creationTimestamp = (pod.metadata as any).creationTimestamp;
     if (!creationTimestamp) return 'Unknown';
-    
+
     const created = new Date(creationTimestamp);
     const now = new Date();
     const diffMs = now.getTime() - created.getTime();
@@ -196,21 +197,26 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
     const diffMinutes = Math.floor(diffSeconds / 60);
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
+
     if (diffDays > 0) return `${diffDays}d ${diffHours % 24}h`;
     if (diffHours > 0) return `${diffHours}h ${diffMinutes % 60}m`;
     if (diffMinutes > 0) return `${diffMinutes}m ${diffSeconds % 60}s`;
     return `${diffSeconds}s`;
   };
 
+  // Helper function to get pod detail page URL
+  const getPodDetailUrl = (pod: PodType): string => {
+    return `/k8s/ns/${pod.metadata.namespace}/pods/${pod.metadata.name}`;
+  };
+
   return (
     <div style={{ marginTop: '0.5rem' }}>
-      <table style={{ 
-        width: '100%', 
+      <table style={{
+        width: '100%',
         borderCollapse: 'collapse'
       }}>
         <thead>
-          <tr style={{ 
+          <tr style={{
             borderBottom: '2px solid var(--pf-global--BorderColor--100)',
             textAlign: 'left'
           }}>
@@ -221,13 +227,45 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
         </thead>
         <tbody>
           {unscheduledPods.map((pod) => (
-            <tr 
+            <tr
               key={pod.metadata.uid}
-              style={{ 
+              style={{
                 borderBottom: '1px solid #D1D1D1'
               }}
             >
-              <td style={{ padding: '0.5rem' }}>{pod.metadata.name}</td>
+              <td style={{ padding: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <div
+                    style={{
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      backgroundColor: '#009596',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      color: '#ffffff',
+                      flexShrink: 0,
+                      marginTop: '2px'
+                    }}
+                  >
+                    P
+                  </div>
+                  <Link
+                    to={getPodDetailUrl(pod)}
+                    style={{
+                      color: '#0066cc',
+                      textDecoration: 'underline',
+                      wordBreak: 'break-word'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {pod.metadata.name}
+                  </Link>
+                </div>
+              </td>
               <td style={{ padding: '0.5rem' }}>{pod.metadata.namespace}</td>
               <td style={{ padding: '0.5rem' }}>{getTimeSinceCreated(pod)}</td>
             </tr>

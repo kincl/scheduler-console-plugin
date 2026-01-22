@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Popover } from '@patternfly/react-core';
 import { PodType } from './types';
 import { calculatePodEffectiveCPU, calculatePodEffectiveMemory, calculatePodEffectiveResource, formatMemory, getSchedulingFailureReason } from './utils';
 
 // Pod Box Component - small box representing a pod
-export const PodBox: React.FC<{ 
-  pod: PodType; 
-  width: number; 
+export const PodBox: React.FC<{
+  pod: PodType;
+  width: number;
   showName: boolean;
   onHover?: (resources: { [key: string]: number }) => void;
   onHoverEnd?: () => void;
@@ -60,11 +61,46 @@ export const PodBox: React.FC<{
     setIsTooltipVisible(!isTooltipVisible);
   };
 
+  // Helper function to get pod detail page URL
+  const getPodDetailUrl = (pod: PodType): string => {
+    return `/k8s/ns/${pod.metadata.namespace}/pods/${pod.metadata.name}`;
+  };
+
   const podContent = (
     <div>
-      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+      <div style={{ display: 'flex', marginBottom: '0.25rem', alignItems: 'flex-start' }}>
         <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Name:</span>
-        <span style={{ wordBreak: 'break-word' }}>{pod.metadata.name}</span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+          <div
+            style={{
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              backgroundColor: '#009596',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+              color: '#ffffff',
+              flexShrink: 0,
+              marginTop: '2px'
+            }}
+          >
+            P
+          </div>
+          <Link
+            to={getPodDetailUrl(pod)}
+            style={{
+              color: '#0066cc',
+              textDecoration: 'underline',
+              wordBreak: 'break-word'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {pod.metadata.name}
+          </Link>
+        </div>
       </div>
       <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
         <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Namespace:</span>
@@ -135,9 +171,9 @@ export const PodBox: React.FC<{
 };
 
 // Pods Display Component - shows all pods for a node
-export const PodsDisplay: React.FC<{ 
-  pods: PodType[]; 
-  showNames: boolean; 
+export const PodsDisplay: React.FC<{
+  pods: PodType[];
+  showNames: boolean;
   title: string;
   onPodHover?: (resources: { [key: string]: number }) => void;
   onPodHoverEnd?: () => void;
@@ -198,10 +234,10 @@ export const PodsDisplay: React.FC<{
           // Pods with no resource allocation are half size
           if (effectiveCPU === 0 && effectiveMemory === 0) {
             return (
-              <PodBox 
-                key={pod.metadata.uid} 
-                pod={pod} 
-                width={minWidth / 2} 
+              <PodBox
+                key={pod.metadata.uid}
+                pod={pod}
+                width={minWidth / 2}
                 showName={showNames}
                 onHover={onPodHover}
                 onHoverEnd={onPodHoverEnd}
@@ -214,10 +250,10 @@ export const PodsDisplay: React.FC<{
           const width = minWidth + combinedScore * (maxWidth - minWidth);
 
           return (
-            <PodBox 
-              key={pod.metadata.uid} 
-              pod={pod} 
-              width={width} 
+            <PodBox
+              key={pod.metadata.uid}
+              pod={pod}
+              width={width}
               showName={showNames}
               onHover={onPodHover}
               onHoverEnd={onPodHoverEnd}
@@ -243,11 +279,46 @@ export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showNa
     setIsTooltipVisible(!isTooltipVisible);
   };
 
+  // Helper function to get pod detail page URL
+  const getPodDetailUrl = (pod: PodType): string => {
+    return `/k8s/ns/${pod.metadata.namespace}/pods/${pod.metadata.name}`;
+  };
+
   const podContent = (
     <div>
-      <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
+      <div style={{ display: 'flex', marginBottom: '0.25rem', alignItems: 'flex-start' }}>
         <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Name:</span>
-        <span style={{ wordBreak: 'break-word' }}>{pod.metadata.name}</span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+          <div
+            style={{
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              backgroundColor: '#009596',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+              color: '#ffffff',
+              flexShrink: 0,
+              marginTop: '2px'
+            }}
+          >
+            P
+          </div>
+          <Link
+            to={getPodDetailUrl(pod)}
+            style={{
+              color: '#0066cc',
+              textDecoration: 'underline',
+              wordBreak: 'break-word'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {pod.metadata.name}
+          </Link>
+        </div>
       </div>
       <div style={{ display: 'flex', marginBottom: '0.25rem' }}>
         <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Namespace:</span>
