@@ -113,8 +113,8 @@ export const CompactNodeCard: React.FC<{
         <div style={{ marginBottom: '0.25rem' }}>
           <strong>Memory:</strong> {memoryPercentage.toFixed(1)}%
         </div>
-          <strong>Memory:</strong> {memoryPercentage.toFixed(1)}%
-          Pods: {pods.length}
+        <div>
+          <strong>Pods:</strong> {pods.length}
         </div>
       </div>
 
