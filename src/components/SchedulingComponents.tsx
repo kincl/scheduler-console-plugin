@@ -169,6 +169,24 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
     );
   }, [pods]);
 
+  // Add styles for link colors in light and dark mode
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .pod-name-link {
+        color: #0066cc;
+        text-decoration: underline;
+      }
+      .pf-theme-dark .pod-name-link {
+        color: #73bcf7;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   if (unscheduledPods.length === 0) {
     return (
       <div style={{
@@ -256,7 +274,6 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
                   <Link
                     to={getPodDetailUrl(pod)}
                     style={{
-                      color: '#0066cc',
                       textDecoration: 'underline',
                       wordBreak: 'break-word'
                     }}

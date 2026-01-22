@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Card, CardTitle, CardBody } from '@patternfly/react-core';
+import { Card, CardBody } from '@patternfly/react-core';
 import { Chart, ChartAxis, ChartBar, ChartThemeColor } from '@patternfly/react-charts';
 import { NodeType, PodType } from './types';
 import { isValidNode, isValidPod, parseCPUQuantity, parseMemoryQuantity, parseGenericResource, formatMemory, getSchedulingFailureReason } from './utils';
@@ -13,40 +13,51 @@ interface ClusterOverviewProps {
   selectedResources: Set<string>;
 }
 
-const ProgressBar: React.FC<{ percentage: number; label: string }> = ({ percentage, label }) => {
+const ProgressBar: React.FC<{ percentage: number; label: string; usedTotalText?: string }> = ({ percentage, label, usedTotalText }) => {
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-      <span style={{ minWidth: '70px' }}>{label}:</span>
-      <div style={{
-        display: 'flex',
-        gap: '2px',
-        flex: 1,
-        alignItems: 'center'
-      }}>
+    <div style={{ marginTop: '0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0' }}>
+        {label && <span style={{ minWidth: '70px' }}>{label}:</span>}
         <div style={{
           display: 'flex',
-          gap: '2px',
+          gap: '1rem',
           flex: 1,
-          height: '16px',
-          backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
-          border: '1px solid var(--pf-global--BorderColor--100)',
-          borderRadius: '2px',
-          overflow: 'hidden',
-          position: 'relative'
+          alignItems: 'center'
         }}>
           <div style={{
-            width: `${percentage}%`,
-            backgroundColor: percentage > 80 ? 'var(--pf-v5-global--danger-color--100, #c9190b)' : percentage > 60 ? 'var(--pf-v5-global--warning-color--100, #f0ab00)' : 'var(--pf-v5-global--success-color--100, #3e8635)',
-            height: '100%',
-            transition: 'width 0.3s ease',
-            minWidth: percentage > 0 ? '2px' : '0'
-          }} />
+            display: 'flex',
+            gap: '2px',
+            flex: 1,
+            height: '16px',
+            backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
+            border: '1px solid var(--pf-global--BorderColor--100)',
+            borderRadius: '2px',
+            overflow: 'hidden',
+            position: 'relative'
+          }}>
+            <div style={{
+              width: `${percentage}%`,
+              backgroundColor: percentage > 80 ? 'var(--pf-v5-global--danger-color--100, #c9190b)' : percentage > 60 ? 'var(--pf-v5-global--warning-color--100, #f0ab00)' : 'var(--pf-v5-global--success-color--100, #3e8635)',
+              height: '100%',
+              transition: 'width 0.3s ease',
+              minWidth: percentage > 0 ? '2px' : '0'
+            }} />
+          </div>
+          <span style={{ minWidth: '45px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+            {Math.round(percentage)}%
+          </span>
         </div>
-        <span style={{ minWidth: '45px', textAlign: 'right' }}>
-          {Math.round(percentage)}%
-        </span>
       </div>
+      {usedTotalText && (
+        <div style={{ 
+          marginTop: '0.25rem',
+          marginLeft: label ? '78px' : '0',
+          color: 'var(--pf-global--Color--200)'
+        }}>
+          {usedTotalText}
+        </div>
+      )}
     </div>
   );
 };
@@ -239,16 +250,16 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Overview Card */}
             <Card>
-              <CardTitle style={{
+              <div style={{
                 fontWeight: 'bold',
-                marginBottom: '0.75rem',
-                paddingBottom: '0.5rem',
-                borderBottom: '1px solid var(--pf-global--BorderColor--100)'
+                padding: '1rem 1rem 0.5rem 1rem',
+                borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                textAlign: 'left'
               }}>
                 Overview
-              </CardTitle>
-              <CardBody style={{ padding: '1rem' }}>
-                <div style={{ lineHeight: '1.8' }}>
+              </div>
+              <CardBody style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}>
+                <div style={{ lineHeight: '1.5', margin: '0', padding: '0' }}>
                   <div style={{ marginBottom: '0.25rem' }}>
                     Total Nodes: <strong>{clusterStats.totalNodes}</strong>    Schedulable: <strong>{clusterStats.schedulableNodes}</strong>
                   </div>
@@ -288,22 +299,20 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
 
               return (
                 <Card key={resourceName}>
-                  <CardTitle style={{
+                  <div style={{
                     fontWeight: 'bold',
-                    marginBottom: '0.75rem',
-                    paddingBottom: '0.5rem',
-                    borderBottom: '1px solid var(--pf-global--BorderColor--100)'
+                    padding: '1rem 1rem 0.5rem 1rem',
+                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                    textAlign: 'left'
                   }}>
                     {label}
-                  </CardTitle>
-                  <CardBody style={{ padding: '1rem' }}>
+                  </div>
+                  <CardBody style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}>
                     <ProgressBar
                       percentage={stats.percentage}
-                      label={label}
+                      label=""
+                      usedTotalText={`${usedDisplay} / ${totalDisplay}`}
                     />
-                    <div style={{ color: 'var(--pf-global--Color--200)', marginTop: '0.25rem', marginLeft: '78px' }}>
-                      {usedDisplay} / {totalDisplay} ({stats.percentage.toFixed(1)}%)
-                    </div>
 
                     {/* Percentiles and Distribution */}
                     <div style={{ color: 'var(--pf-global--Color--200)', marginTop: '1rem' }}>
@@ -500,15 +509,15 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
 
           {/* Right Column - Scheduling Pressure */}
           <Card style={{ height: 'fit-content', maxHeight: '100%', overflow: 'visible' }}>
-            <CardTitle style={{
+            <div style={{
               fontWeight: 'bold',
-              marginBottom: '0.75rem',
-              paddingBottom: '0.5rem',
-              borderBottom: '1px solid var(--pf-global--BorderColor--100)'
+              padding: '1rem 1rem 0.5rem 1rem',
+              borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+              textAlign: 'left'
             }}>
               Scheduling Pressure
-            </CardTitle>
-            <CardBody style={{ padding: '1rem' }}>
+            </div>
+            <CardBody style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}>
               <div style={{ marginBottom: '0.5rem' }}>
                 Unscheduled Pods: <strong>{clusterStats.unscheduledPods}</strong>
               </div>

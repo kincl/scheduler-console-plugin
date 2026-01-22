@@ -92,7 +92,6 @@ export const PodBox: React.FC<{
           <Link
             to={getPodDetailUrl(pod)}
             style={{
-              color: '#0066cc',
               textDecoration: 'underline',
               wordBreak: 'break-word'
             }}
@@ -310,7 +309,6 @@ export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showNa
           <Link
             to={getPodDetailUrl(pod)}
             style={{
-              color: '#0066cc',
               textDecoration: 'underline',
               wordBreak: 'break-word'
             }}
