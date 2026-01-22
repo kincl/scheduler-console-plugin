@@ -372,13 +372,40 @@ const SchedulerPage: React.FC = () => {
               <Tab eventKey={1} title={<TabTitleText>Nodes</TabTitleText>}>
                 <div style={{ paddingTop: '1rem' }}>
                   {nodesLoaded && (
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '1rem', 
-                      marginBottom: '1rem',
-                      flexWrap: 'wrap',
-                      alignItems: 'center'
-                    }}>
+                    <>
+                      <style>{`
+                        .sticky-checkbox-container {
+                          background-color: #fff;
+                          background-color: var(--pf-global--BackgroundColor--100, #fff);
+                          background-color: var(--pf-v5-global--BackgroundColor--100, #fff);
+                        }
+                        .pf-theme-dark .sticky-checkbox-container {
+                          background-color: #212427;
+                          background-color: var(--pf-global--BackgroundColor--100, #212427);
+                          background-color: var(--pf-v5-global--BackgroundColor--100, #212427);
+                        }
+                      `}</style>
+                      <div 
+                        className="sticky-checkbox-container"
+                        style={{ 
+                          display: 'flex', 
+                          gap: '1rem', 
+                          marginBottom: '1rem',
+                          flexWrap: 'wrap',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          position: 'sticky',
+                          top: 0,
+                          borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                          zIndex: 10,
+                          paddingTop: '1rem',
+                          paddingBottom: '1rem',
+                          marginTop: '-1rem',
+                          marginLeft: '-1rem',
+                          marginRight: '-1rem',
+                          paddingLeft: '1rem',
+                          paddingRight: '1rem'
+                        }}>
                       <Checkbox
                         id="hide-empty-nodes"
                         label="Only show nodes with workloads"
@@ -397,7 +424,8 @@ const SchedulerPage: React.FC = () => {
                         isChecked={compactView}
                         onChange={(_, checked) => setCompactView(checked)}
                       />
-                    </div>
+                      </div>
+                    </>
                   )}
                   {compactView ? (
                     <>
