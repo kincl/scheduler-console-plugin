@@ -17,24 +17,22 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
   const schedulingEvents = useMemo(() => {
     if (!events || !Array.isArray(events)) return [];
 
-    const schedulingReasons = [
-      'FailedScheduling',
-      'Scheduled',
-
-    ];
+    const schedulingReasons = ['FailedScheduling', 'Scheduled'];
 
     return events
-      .filter(event =>
-        event.reason && schedulingReasons.some(reason =>
-          event.reason === reason || event.reason.includes(reason)
-        )
+      .filter(
+        (event) =>
+          event.reason &&
+          schedulingReasons.some(
+            (reason) => event.reason === reason || event.reason.includes(reason),
+          ),
       )
       .sort((a, b) => {
         const timeA = new Date(
-          a.lastTimestamp || a.firstTimestamp || a.metadata.creationTimestamp
+          a.lastTimestamp || a.firstTimestamp || a.metadata.creationTimestamp,
         ).getTime();
         const timeB = new Date(
-          b.lastTimestamp || b.firstTimestamp || b.metadata.creationTimestamp
+          b.lastTimestamp || b.firstTimestamp || b.metadata.creationTimestamp,
         ).getTime();
         return timeB - timeA; // Newest first
       })
@@ -48,7 +46,13 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
   if (!loaded) {
     return (
       <Card style={cardStyle}>
-        <CardBody style={fullWidth ? { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}}>
+        <CardBody
+          style={
+            fullWidth
+              ? { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+              : {}
+          }
+        >
           <Spinner size="sm" />
         </CardBody>
       </Card>
@@ -58,7 +62,13 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
   if (error) {
     return (
       <Card style={cardStyle}>
-        <CardBody style={fullWidth ? { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}}>
+        <CardBody
+          style={
+            fullWidth
+              ? { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+              : {}
+          }
+        >
           <div style={{ color: 'var(--pf-global--danger-color--100)' }}>
             Error loading events: {error.message}
           </div>
@@ -69,84 +79,98 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
 
   return (
     <Card style={cardStyle}>
-      <CardTitle style={{ padding: '1rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>
+      <CardTitle
+        style={{ padding: '1rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Label color="blue">Scheduling Events ({schedulingEvents.length})</Label>
         </div>
       </CardTitle>
       <CardBody style={{ padding: '1rem' }}>
-        <div style={{ maxHeight: fullWidth ? 'none' : '400px', overflowY: fullWidth ? 'visible' : 'auto' }}>
+        <div
+          style={{
+            maxHeight: fullWidth ? 'none' : '400px',
+            overflowY: fullWidth ? 'visible' : 'auto',
+          }}
+        >
           {schedulingEvents.length === 0 ? (
-            <div style={{
-              padding: '1rem',
-              textAlign: 'center',
-              color: 'var(--pf-global--Color--200)',
-            }}>
+            <div
+              style={{
+                padding: '1rem',
+                textAlign: 'center',
+                color: 'var(--pf-global--Color--200)',
+              }}
+            >
               No scheduling events found
             </div>
           ) : (
             schedulingEvents.map((event, idx) => {
               const eventTime = new Date(
-                event.lastTimestamp ||
-                event.firstTimestamp ||
-                event.metadata.creationTimestamp
+                event.lastTimestamp || event.firstTimestamp || event.metadata.creationTimestamp,
               );
-              const isWarning = event.type === 'Warning' ||
-                (event.reason && event.reason.includes('Failed'));
+              const isWarning =
+                event.type === 'Warning' || (event.reason && event.reason.includes('Failed'));
 
               return (
                 <div
                   key={`${event.metadata.name}-${idx}`}
                   style={{
                     padding: '0.75rem',
-                    borderBottom: idx < schedulingEvents.length - 1 ? '1px solid var(--pf-global--BorderColor--100)' : 'none',
+                    borderBottom:
+                      idx < schedulingEvents.length - 1
+                        ? '1px solid var(--pf-global--BorderColor--100)'
+                        : 'none',
                   }}
                 >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    marginBottom: '0.25rem',
-                    flexWrap: 'wrap'
-                  }}>
-                    <Label
-                      color={isWarning ? 'orange' : 'green'}
-                      variant="outline"
-                      style={{}}
-                    >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '0.25rem',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <Label color={isWarning ? 'orange' : 'green'} variant="outline" style={{}}>
                       {event.reason || 'Unknown'}
                     </Label>
-                    <span style={{
-                      color: 'var(--pf-global--Color--200)',
-                      whiteSpace: 'nowrap'
-                    }}>
+                    <span
+                      style={{
+                        color: 'var(--pf-global--Color--200)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       {eventTime.toLocaleTimeString()}
                     </span>
                     {event.count && event.count > 1 && (
-                      <span style={{
-                        color: '#6A6E73'
-                      }}>
+                      <span
+                        style={{
+                          color: '#6A6E73',
+                        }}
+                      >
                         ({event.count} times)
                       </span>
                     )}
                   </div>
                   {event.message && (
-                    <div style={{
-                      marginTop: '0.25rem',
-                      wordBreak: 'break-word'
-                    }}>
+                    <div
+                      style={{
+                        marginTop: '0.25rem',
+                        wordBreak: 'break-word',
+                      }}
+                    >
                       {event.message}
                     </div>
                   )}
                   {event.involvedObject && (
-                    <div style={{
-                      color: 'var(--pf-global--Color--200)',
-                      marginTop: '0.25rem'
-                    }}>
+                    <div
+                      style={{
+                        color: 'var(--pf-global--Color--200)',
+                        marginTop: '0.25rem',
+                      }}
+                    >
                       {event.involvedObject.kind}/{event.involvedObject.name}
-                      {event.involvedObject.namespace &&
-                        ` in ${event.involvedObject.namespace}`
-                      }
+                      {event.involvedObject.namespace && ` in ${event.involvedObject.namespace}`}
                     </div>
                   )}
                 </div>
@@ -160,12 +184,13 @@ export const SchedulingEvents: React.FC<{ fullWidth?: boolean }> = ({ fullWidth 
 };
 
 // Scheduling Pressure Component
-export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean }> = ({ pods, showNames }) => {
+export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean }> = ({
+  pods,
+  showNames,
+}) => {
   const unscheduledPods = useMemo(() => {
-    return pods.filter(pod =>
-      isValidPod(pod) &&
-      pod.status.phase === 'Pending' &&
-      !pod.spec.nodeName
+    return pods.filter(
+      (pod) => isValidPod(pod) && pod.status.phase === 'Pending' && !pod.spec.nodeName,
     );
   }, [pods]);
 
@@ -189,16 +214,16 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
 
   if (unscheduledPods.length === 0) {
     return (
-      <div style={{
-        padding: '0.75rem',
-        backgroundColor: 'var(--pf-global--BackgroundColor--100)',
-        borderRadius: '4px',
-        color: 'var(--pf-global--Color--200)'
-      }}>
+      <div
+        style={{
+          padding: '0.75rem',
+          backgroundColor: 'var(--pf-global--BackgroundColor--100)',
+          borderRadius: '4px',
+          color: 'var(--pf-global--Color--200)',
+        }}
+      >
         <Label color="green">Scheduling Pressure: None</Label>
-        <span style={{ marginLeft: '0.5rem' }}>
-          All pods are scheduled
-        </span>
+        <span style={{ marginLeft: '0.5rem' }}>All pods are scheduled</span>
       </div>
     );
   }
@@ -229,15 +254,19 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
 
   return (
     <div style={{ marginTop: '0.5rem' }}>
-      <table style={{
-        width: '100%',
-        borderCollapse: 'collapse'
-      }}>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+        }}
+      >
         <thead>
-          <tr style={{
-            borderBottom: '2px solid var(--pf-global--BorderColor--100)',
-            textAlign: 'left'
-          }}>
+          <tr
+            style={{
+              borderBottom: '2px solid var(--pf-global--BorderColor--100)',
+              textAlign: 'left',
+            }}
+          >
             <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Name</th>
             <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Namespace</th>
             <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Age</th>
@@ -248,7 +277,7 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
             <tr
               key={pod.metadata.uid}
               style={{
-                borderBottom: '1px solid #D1D1D1'
+                borderBottom: '1px solid #D1D1D1',
               }}
             >
               <td style={{ padding: '0.5rem' }}>
@@ -266,7 +295,7 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
                       fontWeight: 'bold',
                       color: '#ffffff',
                       flexShrink: 0,
-                      marginTop: '2px'
+                      marginTop: '2px',
                     }}
                   >
                     P
@@ -275,7 +304,7 @@ export const SchedulingPressure: React.FC<{ pods: PodType[]; showNames: boolean 
                     to={getPodDetailUrl(pod)}
                     style={{
                       textDecoration: 'underline',
-                      wordBreak: 'break-word'
+                      wordBreak: 'break-word',
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >

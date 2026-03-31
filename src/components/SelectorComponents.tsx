@@ -26,8 +26,13 @@ export const ResourceSelector: React.FC<{
       document.body.appendChild(tempElement);
 
       let maxWidth = 200; // minimum width
-      availableResources.forEach(resource => {
-        const resourceText = resource.toLowerCase() === 'cpu' ? 'CPU' : resource.toLowerCase() === 'memory' ? 'Memory' : resource;
+      availableResources.forEach((resource) => {
+        const resourceText =
+          resource.toLowerCase() === 'cpu'
+            ? 'CPU'
+            : resource.toLowerCase() === 'memory'
+            ? 'Memory'
+            : resource;
         tempElement.textContent = resourceText;
         const textWidth = tempElement.offsetWidth;
         // Add space for checkbox (24px) + margin (0.5rem) + padding (2rem total)
@@ -40,7 +45,7 @@ export const ResourceSelector: React.FC<{
       setDropdownPosition({
         top: rect.bottom + window.scrollY + 4,
         left: rect.left + window.scrollX,
-        width: maxWidth
+        width: maxWidth,
       });
     }
   }, [isOpen, availableResources]);
@@ -48,16 +53,10 @@ export const ResourceSelector: React.FC<{
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        buttonRef.current &&
-        buttonRef.current.contains(event.target as Node)
-      ) {
+      if (buttonRef.current && buttonRef.current.contains(event.target as Node)) {
         return;
       }
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -70,9 +69,7 @@ export const ResourceSelector: React.FC<{
   }, [isOpen]);
 
   const selectedCount = selectedResources.size;
-  const buttonText = selectedCount === 0
-    ? 'Select Resources'
-    : `Resources (${selectedCount})`;
+  const buttonText = selectedCount === 0 ? 'Select Resources' : `Resources (${selectedCount})`;
 
   return (
     <>
@@ -84,7 +81,7 @@ export const ResourceSelector: React.FC<{
           style={{
             minWidth: '200px',
             textAlign: 'left',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
           }}
         >
           <span>{buttonText}</span>
@@ -103,12 +100,13 @@ export const ResourceSelector: React.FC<{
             maxHeight: '300px',
             overflowY: 'auto',
             overflowX: 'hidden',
-            backgroundColor: 'var(--pf-v5-global--BackgroundColor--100, var(--pf-global--BackgroundColor--100, #fff))',
+            backgroundColor:
+              'var(--pf-v5-global--BackgroundColor--100, var(--pf-global--BackgroundColor--100, #fff))',
             boxShadow: '0 0.5rem 1rem 0 rgba(3, 3, 3, 0.16), 0 0 0.375rem 0 rgba(3, 3, 3, 0.08)',
             borderRadius: 'var(--pf-global--BorderRadius--sm)',
             zIndex: 9999,
             padding: 0,
-            border: '1px solid var(--pf-global--BorderColor--100)'
+            border: '1px solid var(--pf-global--BorderColor--100)',
           }}
         >
           <style>{`
@@ -136,7 +134,7 @@ export const ResourceSelector: React.FC<{
               background: var(--pf-global--palette--black-500);
             }
           `}</style>
-          {availableResources.map(resource => {
+          {availableResources.map((resource) => {
             const isSelected = selectedResources.has(resource);
             return (
               <div
@@ -148,9 +146,11 @@ export const ResourceSelector: React.FC<{
                   alignItems: 'center',
                   width: '100%',
                   boxSizing: 'border-box',
-                  backgroundColor: isSelected ? 'var(--pf-global--active-color--100)' : 'transparent',
+                  backgroundColor: isSelected
+                    ? 'var(--pf-global--active-color--100)'
+                    : 'transparent',
                   borderBottom: '1px solid var(--pf-global--BorderColor--100)',
-                  color: 'var(--pf-global--Color--100)'
+                  color: 'var(--pf-global--Color--100)',
                 }}
                 onClick={(e) => {
                   // Toggle when clicking anywhere on the row (div, label, or checkbox)
@@ -189,7 +189,7 @@ export const ResourceSelector: React.FC<{
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    color: 'var(--pf-global--Color--100)'
+                    color: 'var(--pf-global--Color--100)',
                   }}
                   onClick={(e) => {
                     e.preventDefault();
@@ -197,7 +197,11 @@ export const ResourceSelector: React.FC<{
                     onResourceToggle(resource);
                   }}
                 >
-                  {resource.toLowerCase() === 'cpu' ? 'CPU' : resource.toLowerCase() === 'memory' ? 'Memory' : resource}
+                  {resource.toLowerCase() === 'cpu'
+                    ? 'CPU'
+                    : resource.toLowerCase() === 'memory'
+                    ? 'Memory'
+                    : resource}
                 </label>
               </div>
             );
@@ -226,7 +230,7 @@ export const ProjectSelector: React.FC<{
   const filteredNamespaces = useMemo(() => {
     if (!searchValue) return availableNamespaces;
     const lowerSearch = searchValue.toLowerCase();
-    return availableNamespaces.filter(ns => ns.toLowerCase().includes(lowerSearch));
+    return availableNamespaces.filter((ns) => ns.toLowerCase().includes(lowerSearch));
   }, [availableNamespaces, searchValue]);
 
   // Calculate dropdown position and width when opening
@@ -236,7 +240,7 @@ export const ProjectSelector: React.FC<{
       setDropdownPosition({
         top: rect.bottom + window.scrollY + 4,
         left: rect.left + window.scrollX,
-        width: Math.max(rect.width, 300)
+        width: Math.max(rect.width, 300),
       });
     }
   }, [isOpen]);
@@ -244,16 +248,10 @@ export const ProjectSelector: React.FC<{
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        buttonRef.current &&
-        buttonRef.current.contains(event.target as Node)
-      ) {
+      if (buttonRef.current && buttonRef.current.contains(event.target as Node)) {
         return;
       }
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setSearchValue('');
       }
@@ -267,10 +265,12 @@ export const ProjectSelector: React.FC<{
   }, [isOpen]);
 
   const selectedCount = selectedNamespaces.size;
-  const allSelected = selectedCount === availableNamespaces.length && availableNamespaces.length > 0;
-  const buttonText = selectedCount === 0
-    ? 'All Projects'
-    : allSelected
+  const allSelected =
+    selectedCount === availableNamespaces.length && availableNamespaces.length > 0;
+  const buttonText =
+    selectedCount === 0
+      ? 'All Projects'
+      : allSelected
       ? 'All Projects'
       : `Projects (${selectedCount})`;
 
@@ -284,7 +284,7 @@ export const ProjectSelector: React.FC<{
           style={{
             minWidth: '200px',
             textAlign: 'left',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
           }}
         >
           <span>{buttonText}</span>
@@ -303,12 +303,13 @@ export const ProjectSelector: React.FC<{
             maxHeight: '400px',
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: 'var(--pf-v5-global--BackgroundColor--100, var(--pf-global--BackgroundColor--100, #fff))',
+            backgroundColor:
+              'var(--pf-v5-global--BackgroundColor--100, var(--pf-global--BackgroundColor--100, #fff))',
             boxShadow: '0 0.5rem 1rem 0 rgba(3, 3, 3, 0.16), 0 0 0.375rem 0 rgba(3, 3, 3, 0.08)',
             borderRadius: 'var(--pf-global--BorderRadius--sm)',
             zIndex: 9999,
             padding: 0,
-            border: '1px solid var(--pf-global--BorderColor--100)'
+            border: '1px solid var(--pf-global--BorderColor--100)',
           }}
         >
           <style>
@@ -352,11 +353,13 @@ export const ProjectSelector: React.FC<{
           `}
           </style>
           {/* Search input */}
-          <div style={{
-            padding: '0.5rem',
-            borderBottom: '1px solid var(--pf-global--BorderColor--100)',
-            backgroundColor: 'transparent'
-          }}>
+          <div
+            style={{
+              padding: '0.5rem',
+              borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+              backgroundColor: 'transparent',
+            }}
+          >
             <SearchInput
               placeholder="Search projects..."
               value={searchValue}
@@ -366,25 +369,19 @@ export const ProjectSelector: React.FC<{
             />
           </div>
           {/* Select/Clear all buttons */}
-          <div style={{
-            display: 'flex',
-            gap: '0.5rem',
-            padding: '0.5rem',
-            borderBottom: '1px solid var(--pf-global--BorderColor--100)',
-            backgroundColor: 'transparent'
-          }}>
-            <Button
-              variant="link"
-              onClick={onSelectAll}
-              style={{ padding: '0.25rem 0.5rem' }}
-            >
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.5rem',
+              padding: '0.5rem',
+              borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+              backgroundColor: 'transparent',
+            }}
+          >
+            <Button variant="link" onClick={onSelectAll} style={{ padding: '0.25rem 0.5rem' }}>
               Select All
             </Button>
-            <Button
-              variant="link"
-              onClick={onClearAll}
-              style={{ padding: '0.25rem 0.5rem' }}
-            >
+            <Button variant="link" onClick={onClearAll} style={{ padding: '0.25rem 0.5rem' }}>
               Clear All
             </Button>
           </div>
@@ -394,19 +391,21 @@ export const ProjectSelector: React.FC<{
             style={{
               overflowY: 'auto',
               overflowX: 'hidden',
-              flex: 1
+              flex: 1,
             }}
           >
             {filteredNamespaces.length === 0 ? (
-              <div style={{
-                padding: '1rem',
-                textAlign: 'center',
-                color: 'var(--pf-global--Color--100)'
-              }}>
+              <div
+                style={{
+                  padding: '1rem',
+                  textAlign: 'center',
+                  color: 'var(--pf-global--Color--100)',
+                }}
+              >
                 No projects found
               </div>
             ) : (
-              filteredNamespaces.map(namespace => {
+              filteredNamespaces.map((namespace) => {
                 const isSelected = selectedNamespaces.has(namespace);
                 return (
                   <div
@@ -418,9 +417,11 @@ export const ProjectSelector: React.FC<{
                       alignItems: 'center',
                       width: '100%',
                       boxSizing: 'border-box',
-                      backgroundColor: isSelected ? 'var(--pf-global--active-color--100)' : 'transparent',
+                      backgroundColor: isSelected
+                        ? 'var(--pf-global--active-color--100)'
+                        : 'transparent',
                       borderBottom: '1px solid var(--pf-global--BorderColor--100)',
-                      color: 'var(--pf-global--Color--100)'
+                      color: 'var(--pf-global--Color--100)',
                     }}
                     onClick={(e) => {
                       const target = e.target as HTMLElement;
@@ -429,13 +430,15 @@ export const ProjectSelector: React.FC<{
                       }
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--pf-global--BackgroundColor--200)';
+                      e.currentTarget.style.backgroundColor =
+                        'var(--pf-global--BackgroundColor--200)';
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) {
                         e.currentTarget.style.backgroundColor = 'transparent';
                       } else {
-                        e.currentTarget.style.backgroundColor = 'var(--pf-global--active-color--100)';
+                        e.currentTarget.style.backgroundColor =
+                          'var(--pf-global--active-color--100)';
                       }
                     }}
                   >
@@ -458,7 +461,7 @@ export const ProjectSelector: React.FC<{
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        color: 'var(--pf-global--Color--100)'
+                        color: 'var(--pf-global--Color--100)',
                       }}
                       onClick={(e) => {
                         e.preventDefault();

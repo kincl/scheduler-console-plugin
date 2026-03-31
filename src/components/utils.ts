@@ -21,13 +21,13 @@ export const parseMemoryQuantity = (quantity: string): number => {
   if (!quantity) return 0;
 
   // Handle formats like "1Gi", "512Mi", "2Ki", etc.
-  const units: {[key: string]: number} = {
-    'Ki': 1024,
-    'Mi': 1024 * 1024,
-    'Gi': 1024 * 1024 * 1024,
-    'Ti': 1024 * 1024 * 1024 * 1024,
-    'Pi': 1024 * 1024 * 1024 * 1024 * 1024,
-    'Ei': 1024 * 1024 * 1024 * 1024 * 1024 * 1024
+  const units: { [key: string]: number } = {
+    Ki: 1024,
+    Mi: 1024 * 1024,
+    Gi: 1024 * 1024 * 1024,
+    Ti: 1024 * 1024 * 1024 * 1024,
+    Pi: 1024 * 1024 * 1024 * 1024 * 1024,
+    Ei: 1024 * 1024 * 1024 * 1024 * 1024 * 1024,
   };
 
   const match = quantity.match(/^(\d+(?:\.\d+)?)([KMGTPE]i)?$/);
@@ -41,7 +41,7 @@ export const parseMemoryQuantity = (quantity: string): number => {
 };
 
 // Format memory bytes to human-readable string
-export const formatMemory = (bytes: number): { value: string, unit: string } => {
+export const formatMemory = (bytes: number): { value: string; unit: string } => {
   if (bytes === 0) return { value: '0', unit: 'B' };
 
   const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
@@ -55,7 +55,7 @@ export const formatMemory = (bytes: number): { value: string, unit: string } => 
 
   return {
     value: size.toFixed(2),
-    unit: units[unitIndex]
+    unit: units[unitIndex],
   };
 };
 
@@ -90,7 +90,7 @@ export const getNodeRoles = (node: NodeType): string[] => {
   const roles: string[] = [];
   const labels = node.metadata?.labels || {};
 
-  Object.keys(labels).forEach(key => {
+  Object.keys(labels).forEach((key) => {
     if (key.startsWith('node-role.kubernetes.io/')) {
       const role = key.replace('node-role.kubernetes.io/', '');
       // Skip empty roles or if the value is not "true" or empty
@@ -108,7 +108,7 @@ export const calculatePodEffectiveCPU = (pod: PodType): number => {
   let totalRequests = 0;
   let totalLimits = 0;
 
-  pod.spec.containers.forEach(container => {
+  pod.spec.containers.forEach((container) => {
     const cpuRequest = container.resources?.requests?.cpu || '0';
     const cpuLimit = container.resources?.limits?.cpu || '0';
     totalRequests += parseCPUQuantity(cpuRequest);
@@ -123,7 +123,7 @@ export const calculatePodEffectiveMemory = (pod: PodType): number => {
   let totalRequests = 0;
   let totalLimits = 0;
 
-  pod.spec.containers.forEach(container => {
+  pod.spec.containers.forEach((container) => {
     const memoryRequest = container.resources?.requests?.memory || '0';
     const memoryLimit = container.resources?.limits?.memory || '0';
     totalRequests += parseMemoryQuantity(memoryRequest);
@@ -138,10 +138,10 @@ export const calculatePodEffectiveResource = (pod: PodType, resourceName: string
   let totalRequests = 0;
   let totalLimits = 0;
 
-  pod.spec.containers.forEach(container => {
+  pod.spec.containers.forEach((container) => {
     const request = container.resources?.requests?.[resourceName] || '0';
     const limit = container.resources?.limits?.[resourceName] || '0';
-    
+
     // Parse based on resource type
     let parsedRequest = 0;
     let parsedLimit = 0;
@@ -155,7 +155,7 @@ export const calculatePodEffectiveResource = (pod: PodType, resourceName: string
       parsedRequest = parseGenericResource(request);
       parsedLimit = parseGenericResource(limit);
     }
-    
+
     totalRequests += parsedRequest;
     totalLimits += parsedLimit;
   });
@@ -182,7 +182,8 @@ export const isValidPod = (pod: any): pod is PodType => {
     pod &&
     typeof pod === 'object' &&
     pod.spec &&
-    pod.spec.containers && Array.isArray(pod.spec.containers) &&
+    pod.spec.containers &&
+    Array.isArray(pod.spec.containers) &&
     pod.metadata &&
     typeof pod.metadata.name === 'string' &&
     typeof pod.metadata.uid === 'string' &&
@@ -261,7 +262,7 @@ export const getSchedulingFailureReason = (pod: PodType): string | null => {
 
   // Look for PodScheduled condition with status False
   const podScheduledCondition = pod.status.conditions.find(
-    condition => condition.type === 'PodScheduled' && condition.status === 'False'
+    (condition) => condition.type === 'PodScheduled' && condition.status === 'False',
   );
 
   if (podScheduledCondition) {

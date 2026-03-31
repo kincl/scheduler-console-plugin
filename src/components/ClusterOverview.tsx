@@ -2,47 +2,75 @@ import React, { useMemo } from 'react';
 import { Card, CardBody } from '@patternfly/react-core';
 import { Chart, ChartAxis, ChartBar, ChartThemeColor } from '@patternfly/react-charts';
 import { NodeType, PodType } from './types';
-import { isValidNode, isValidPod, parseCPUQuantity, parseMemoryQuantity, parseGenericResource, formatMemory, getSchedulingFailureReason } from './utils';
+import {
+  isValidNode,
+  isValidPod,
+  parseCPUQuantity,
+  parseMemoryQuantity,
+  parseGenericResource,
+  formatMemory,
+  getSchedulingFailureReason,
+} from './utils';
 import { SchedulingPressure } from './SchedulingComponents';
 
 interface ClusterOverviewProps {
   nodes: NodeType[];
   pods: PodType[];
-  nodeResourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } };
+  nodeResourceUsage: {
+    [resourceName: string]: {
+      requests: { [nodeName: string]: number };
+      limits: { [nodeName: string]: number };
+    };
+  };
   showPodNames: boolean;
   selectedResources: Set<string>;
 }
 
-const ProgressBar: React.FC<{ percentage: number; label: string; usedTotalText?: string }> = ({ percentage, label, usedTotalText }) => {
-
+const ProgressBar: React.FC<{ percentage: number; label: string; usedTotalText?: string }> = ({
+  percentage,
+  label,
+  usedTotalText,
+}) => {
   return (
     <div style={{ marginTop: '0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0' }}>
         {label && <span style={{ minWidth: '70px' }}>{label}:</span>}
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          flex: 1,
-          alignItems: 'center'
-        }}>
-          <div style={{
+        <div
+          style={{
             display: 'flex',
-            gap: '2px',
+            gap: '1rem',
             flex: 1,
-            height: '16px',
-            backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
-            border: '1px solid var(--pf-global--BorderColor--100)',
-            borderRadius: '2px',
-            overflow: 'hidden',
-            position: 'relative'
-          }}>
-            <div style={{
-              width: `${percentage}%`,
-              backgroundColor: percentage > 80 ? 'var(--pf-v5-global--danger-color--100, #c9190b)' : percentage > 60 ? 'var(--pf-v5-global--warning-color--100, #f0ab00)' : 'var(--pf-v5-global--success-color--100, #3e8635)',
-              height: '100%',
-              transition: 'width 0.3s ease',
-              minWidth: percentage > 0 ? '2px' : '0'
-            }} />
+            alignItems: 'center',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              gap: '2px',
+              flex: 1,
+              height: '16px',
+              backgroundColor:
+                'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
+              border: '1px solid var(--pf-global--BorderColor--100)',
+              borderRadius: '2px',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            <div
+              style={{
+                width: `${percentage}%`,
+                backgroundColor:
+                  percentage > 80
+                    ? 'var(--pf-v5-global--danger-color--100, #c9190b)'
+                    : percentage > 60
+                    ? 'var(--pf-v5-global--warning-color--100, #f0ab00)'
+                    : 'var(--pf-v5-global--success-color--100, #3e8635)',
+                height: '100%',
+                transition: 'width 0.3s ease',
+                minWidth: percentage > 0 ? '2px' : '0',
+              }}
+            />
           </div>
           <span style={{ minWidth: '45px', textAlign: 'right', whiteSpace: 'nowrap' }}>
             {Math.round(percentage)}%
@@ -50,11 +78,13 @@ const ProgressBar: React.FC<{ percentage: number; label: string; usedTotalText?:
         </div>
       </div>
       {usedTotalText && (
-        <div style={{ 
-          marginTop: '0.25rem',
-          marginLeft: label ? '78px' : '0',
-          color: 'var(--pf-global--Color--200)'
-        }}>
+        <div
+          style={{
+            marginTop: '0.25rem',
+            marginLeft: label ? '78px' : '0',
+            color: 'var(--pf-global--Color--200)',
+          }}
+        >
           {usedTotalText}
         </div>
       )}
@@ -62,15 +92,21 @@ const ProgressBar: React.FC<{ percentage: number; label: string; usedTotalText?:
   );
 };
 
-export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, nodeResourceUsage, showPodNames, selectedResources }) => {
+export const ClusterOverview: React.FC<ClusterOverviewProps> = ({
+  nodes,
+  pods,
+  nodeResourceUsage,
+  showPodNames,
+  selectedResources,
+}) => {
   // Calculate cluster statistics
   const clusterStats = useMemo(() => {
     const validNodesList = nodes.filter(isValidNode);
     const validPodsList = pods.filter(isValidPod);
 
     // Count schedulable nodes (nodes that are ready)
-    const schedulableNodes = validNodesList.filter(node => {
-      const readyCondition = node.status?.conditions?.find(cond => cond.type === 'Ready');
+    const schedulableNodes = validNodesList.filter((node) => {
+      const readyCondition = node.status?.conditions?.find((cond) => cond.type === 'Ready');
       return readyCondition?.status === 'True';
     });
 
@@ -82,8 +118,8 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
     }, {} as { [key: string]: number });
 
     // Count unscheduled pods
-    const unscheduledPods = validPodsList.filter(pod =>
-      pod.status.phase === 'Pending' && !pod.spec.nodeName
+    const unscheduledPods = validPodsList.filter(
+      (pod) => pod.status.phase === 'Pending' && !pod.spec.nodeName,
     );
 
     // Calculate total cluster capacity and usage for selected resources
@@ -92,7 +128,12 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
         total: number;
         used: number;
         percentage: number;
-        nodePercentages: Array<{ nodeName: string; percentage: number; used: number; total: number }>;
+        nodePercentages: Array<{
+          nodeName: string;
+          percentage: number;
+          used: number;
+          total: number;
+        }>;
         percentiles: {
           p100: { nodeName: string; percentage: number; used: number; total: number } | null;
           p99: { nodeName: string; percentage: number; used: number; total: number } | null;
@@ -102,16 +143,21 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
           p0: { nodeName: string; percentage: number; used: number; total: number } | null;
         };
         distribution: { [range: string]: number };
-      }
+      };
     } = {};
 
-    selectedResources.forEach(resourceName => {
+    selectedResources.forEach((resourceName) => {
       let total = 0;
       let used = 0;
-      const nodePercentages: Array<{ nodeName: string; percentage: number; used: number; total: number }> = [];
+      const nodePercentages: Array<{
+        nodeName: string;
+        percentage: number;
+        used: number;
+        total: number;
+      }> = [];
 
       // Calculate per-node capacity and usage
-      validNodesList.forEach(node => {
+      validNodesList.forEach((node) => {
         const capacity = node.status?.capacity || {};
         const capacityValue = capacity[resourceName] || '0';
         const nodeName = node.metadata.name;
@@ -146,7 +192,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
           nodeName,
           percentage: nodePercentage,
           used: nodeUsed,
-          total: nodeTotal
+          total: nodeTotal,
         });
       });
 
@@ -166,7 +212,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
         p90: getPercentile(90),
         p50: getPercentile(50),
         p10: getPercentile(10),
-        p0: sortedPercentages[sortedPercentages.length - 1] || null
+        p0: sortedPercentages[sortedPercentages.length - 1] || null,
       };
 
       // Calculate distribution (buckets)
@@ -180,10 +226,10 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
         '60-70': 0,
         '70-80': 0,
         '80-90': 0,
-        '90-100': 0
+        '90-100': 0,
       };
 
-      nodePercentages.forEach(node => {
+      nodePercentages.forEach((node) => {
         const pct = node.percentage;
         if (pct < 10) distribution['0-10']++;
         else if (pct < 20) distribution['10-20']++;
@@ -206,7 +252,7 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
         percentage,
         nodePercentages,
         percentiles,
-        distribution
+        distribution,
       };
     });
 
@@ -216,21 +262,19 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
       totalPods: validPodsList.length,
       runningPods: podsByPhase['Running'] || 0,
       resourceStats,
-      unscheduledPods: unscheduledPods.length
+      unscheduledPods: unscheduledPods.length,
     };
   }, [nodes, pods, nodeResourceUsage, selectedResources]);
 
   // Calculate scheduling failures grouped by error reason
   const schedulingFailures = useMemo(() => {
-    const unscheduledPods = pods.filter(pod =>
-      isValidPod(pod) &&
-      pod.status.phase === 'Pending' &&
-      !pod.spec.nodeName
+    const unscheduledPods = pods.filter(
+      (pod) => isValidPod(pod) && pod.status.phase === 'Pending' && !pod.spec.nodeName,
     );
 
     const groups: { [reason: string]: number } = {};
 
-    unscheduledPods.forEach(pod => {
+    unscheduledPods.forEach((pod) => {
       const reason = getSchedulingFailureReason(pod) || 'Unknown reason';
       groups[reason] = (groups[reason] || 0) + 1;
     });
@@ -240,334 +284,563 @@ export const ClusterOverview: React.FC<ClusterOverviewProps> = ({ nodes, pods, n
 
   return (
     <div style={{ marginBottom: '1rem' }}>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 0.4fr)',
-        gap: '1.5rem',
-        alignItems: 'start'
-      }}>
-          {/* Left Column - Overview and Resources */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {/* Overview Card */}
-            <Card>
-              <div style={{
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 0.4fr)',
+          gap: '1.5rem',
+          alignItems: 'start',
+        }}
+      >
+        {/* Left Column - Overview and Resources */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Overview Card */}
+          <Card>
+            <div
+              style={{
                 fontWeight: 'bold',
                 padding: '1rem 1rem 0.5rem 1rem',
                 borderBottom: '1px solid var(--pf-global--BorderColor--100)',
-                textAlign: 'left'
-              }}>
-                Overview
-              </div>
-              <CardBody style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}>
-                <div style={{ lineHeight: '1.5', margin: '0', padding: '0' }}>
-                  <div style={{ marginBottom: '0.25rem' }}>
-                    Total Nodes: <strong>{clusterStats.totalNodes}</strong>    Schedulable: <strong>{clusterStats.schedulableNodes}</strong>
-                  </div>
-                  <div>
-                    Total Pods: <strong>{clusterStats.totalPods.toLocaleString()}</strong>  Running: <strong>{clusterStats.runningPods.toLocaleString()}</strong>
-                  </div>
+                textAlign: 'left',
+              }}
+            >
+              Overview
+            </div>
+            <CardBody
+              style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}
+            >
+              <div style={{ lineHeight: '1.5', margin: '0', padding: '0' }}>
+                <div style={{ marginBottom: '0.25rem' }}>
+                  Total Nodes: <strong>{clusterStats.totalNodes}</strong> Schedulable:{' '}
+                  <strong>{clusterStats.schedulableNodes}</strong>
                 </div>
-              </CardBody>
-            </Card>
+                <div>
+                  Total Pods: <strong>{clusterStats.totalPods.toLocaleString()}</strong> Running:{' '}
+                  <strong>{clusterStats.runningPods.toLocaleString()}</strong>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
 
-            {/* Resource Cards */}
-            {Array.from(selectedResources).map(resourceName => {
-              const stats = clusterStats.resourceStats[resourceName];
-              if (!stats) return null;
-              // Capitalize first letter for display (special case for CPU and Memory)
-              const label = resourceName.toLowerCase() === 'cpu' 
-                ? 'CPU' 
+          {/* Resource Cards */}
+          {Array.from(selectedResources).map((resourceName) => {
+            const stats = clusterStats.resourceStats[resourceName];
+            if (!stats) return null;
+            // Capitalize first letter for display (special case for CPU and Memory)
+            const label =
+              resourceName.toLowerCase() === 'cpu'
+                ? 'CPU'
                 : resourceName.toLowerCase() === 'memory'
                 ? 'Memory'
                 : resourceName;
 
-              // Format values based on resource type
-              let usedDisplay = '';
-              let totalDisplay = '';
-              if (resourceName === 'cpu') {
-                usedDisplay = stats.used.toFixed(1);
-                totalDisplay = stats.total.toFixed(1);
-              } else if (resourceName === 'memory') {
-                const usedMem = formatMemory(stats.used);
-                const totalMem = formatMemory(stats.total);
-                usedDisplay = `${usedMem.value}${usedMem.unit}`;
-                totalDisplay = `${totalMem.value}${totalMem.unit}`;
-              } else {
-                usedDisplay = stats.used.toFixed(1);
-                totalDisplay = stats.total.toFixed(1);
-              }
+            // Format values based on resource type
+            let usedDisplay = '';
+            let totalDisplay = '';
+            if (resourceName === 'cpu') {
+              usedDisplay = stats.used.toFixed(1);
+              totalDisplay = stats.total.toFixed(1);
+            } else if (resourceName === 'memory') {
+              const usedMem = formatMemory(stats.used);
+              const totalMem = formatMemory(stats.total);
+              usedDisplay = `${usedMem.value}${usedMem.unit}`;
+              totalDisplay = `${totalMem.value}${totalMem.unit}`;
+            } else {
+              usedDisplay = stats.used.toFixed(1);
+              totalDisplay = stats.total.toFixed(1);
+            }
 
-              return (
-                <Card key={resourceName}>
-                  <div style={{
+            return (
+              <Card key={resourceName}>
+                <div
+                  style={{
                     fontWeight: 'bold',
                     padding: '1rem 1rem 0.5rem 1rem',
                     borderBottom: '1px solid var(--pf-global--BorderColor--100)',
-                    textAlign: 'left'
-                  }}>
-                    {label}
-                  </div>
-                  <CardBody style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}>
-                    <ProgressBar
-                      percentage={stats.percentage}
-                      label=""
-                      usedTotalText={`${usedDisplay} / ${totalDisplay}`}
-                    />
+                    textAlign: 'left',
+                  }}
+                >
+                  {label}
+                </div>
+                <CardBody
+                  style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}
+                >
+                  <ProgressBar
+                    percentage={stats.percentage}
+                    label=""
+                    usedTotalText={`${usedDisplay} / ${totalDisplay}`}
+                  />
 
-                    {/* Percentiles and Distribution */}
-                    <div style={{ color: 'var(--pf-global--Color--200)', marginTop: '1rem' }}>
-                      <div style={{
+                  {/* Percentiles and Distribution */}
+                  <div style={{ color: 'var(--pf-global--Color--200)', marginTop: '1rem' }}>
+                    <div
+                      style={{
                         display: 'flex',
                         flexDirection: 'row',
                         flexWrap: 'wrap',
-                        gap: '1.5rem'
-                      }}>
-                        {/* Percentiles Table */}
-                        <div style={{ minWidth: '280px', flex: '1 1 280px' }}>
-                          <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                            Percentiles:
-                          </div>
-                          <table style={{
-                            width: '100%',
-                            borderCollapse: 'collapse'
-                          }}>
-                            <thead>
-                              <tr style={{
-                                borderBottom: '2px solid var(--pf-global--BorderColor--100)',
-                                textAlign: 'left'
-                              }}>
-                                <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Percentile</th>
-                                <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Node</th>
-                                <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Value</th>
-                                <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>%</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {stats.percentiles.p100 && (
-                                <tr>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>P100 (Max)</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p100.nodeName}</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>
-                                    {resourceName === 'cpu' ? stats.percentiles.p100.used.toFixed(1) : resourceName === 'memory' ? formatMemory(stats.percentiles.p100.used).value + formatMemory(stats.percentiles.p100.used).unit : stats.percentiles.p100.used.toFixed(1)}
-                                  </td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p100.percentage.toFixed(1)}%</td>
-                                </tr>
-                              )}
-                              {stats.percentiles.p99 && (
-                                <tr>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>P99</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p99.nodeName}</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>
-                                    {resourceName === 'cpu' ? stats.percentiles.p99.used.toFixed(1) : resourceName === 'memory' ? formatMemory(stats.percentiles.p99.used).value + formatMemory(stats.percentiles.p99.used).unit : stats.percentiles.p99.used.toFixed(1)}
-                                  </td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p99.percentage.toFixed(1)}%</td>
-                                </tr>
-                              )}
-                              {stats.percentiles.p90 && (
-                                <tr>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>P90</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p90.nodeName}</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>
-                                    {resourceName === 'cpu' ? stats.percentiles.p90.used.toFixed(1) : resourceName === 'memory' ? formatMemory(stats.percentiles.p90.used).value + formatMemory(stats.percentiles.p90.used).unit : stats.percentiles.p90.used.toFixed(1)}
-                                  </td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p90.percentage.toFixed(1)}%</td>
-                                </tr>
-                              )}
-                              {stats.percentiles.p50 && (
-                                <tr>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>P50 (Median)</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p50.nodeName}</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>
-                                    {resourceName === 'cpu' ? stats.percentiles.p50.used.toFixed(1) : resourceName === 'memory' ? formatMemory(stats.percentiles.p50.used).value + formatMemory(stats.percentiles.p50.used).unit : stats.percentiles.p50.used.toFixed(1)}
-                                  </td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p50.percentage.toFixed(1)}%</td>
-                                </tr>
-                              )}
-                              {stats.percentiles.p10 && (
-                                <tr>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>P10</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p10.nodeName}</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>
-                                    {resourceName === 'cpu' ? stats.percentiles.p10.used.toFixed(1) : resourceName === 'memory' ? formatMemory(stats.percentiles.p10.used).value + formatMemory(stats.percentiles.p10.used).unit : stats.percentiles.p10.used.toFixed(1)}
-                                  </td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p10.percentage.toFixed(1)}%</td>
-                                </tr>
-                              )}
-                              {stats.percentiles.p0 && (
-                                <tr>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>P0 (Min)</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p0.nodeName}</td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>
-                                    {resourceName === 'cpu' ? stats.percentiles.p0.used.toFixed(1) : resourceName === 'memory' ? formatMemory(stats.percentiles.p0.used).value + formatMemory(stats.percentiles.p0.used).unit : stats.percentiles.p0.used.toFixed(1)}
-                                  </td>
-                                  <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--pf-global--BorderColor--100)' }}>{stats.percentiles.p0.percentage.toFixed(1)}%</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
+                        gap: '1.5rem',
+                      }}
+                    >
+                      {/* Percentiles Table */}
+                      <div style={{ minWidth: '280px', flex: '1 1 280px' }}>
+                        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                          Percentiles:
                         </div>
-
-                        {/* Distribution Bar Chart */}
-                        <div style={{ minWidth: '280px', flex: '1 1 280px', paddingLeft: '1rem' }}>
-                          <div style={{ marginBottom: '2.5rem', fontWeight: 'bold' }}>
-                            Node Resource Distribution:
-                          </div>
-                          {(() => {
-                            const maxCount = Math.max(...Object.values(stats.distribution), 1);
-                            
-                            // Convert distribution data to PatternFly chart format
-                            const chartData = Object.entries(stats.distribution).map(([range, count]) => ({
-                              x: range,
-                              y: count
-                            }));
-
-                            // Calculate unique y-axis tick values
-                            const numTicks = Math.min(maxCount + 1, 6); // Max 6 ticks
-                            const tickStep = maxCount / (numTicks - 1);
-                            const yTickValues: number[] = [];
-                            for (let i = 0; i < numTicks; i++) {
-                              const tickValue = Math.round(i * tickStep);
-                              // Only add if it's unique
-                              if (yTickValues.length === 0 || tickValue !== yTickValues[yTickValues.length - 1]) {
-                                yTickValues.push(tickValue);
-                              }
-                            }
-
-                            // Determine color based on percentage range
-                            const getBarColor = (rangeStr: string, count: number) => {
-                              if (count === 0) return 'var(--pf-global--BorderColor--100)';
-
-                              // Extract the upper bound of the range (e.g., "80-90" -> 90)
-                              const match = rangeStr.match(/(\d+)-(\d+)/);
-                              if (!match) return '#3e8635'; // default to green
-
-                              const upperBound = parseInt(match[2], 10);
-
-                              // Green for 0-50%, Yellow for 50-80%, Red for 80-100%
-                              if (upperBound <= 50) {
-                                return '#3e8635'; // green
-                              } else if (upperBound <= 80) {
-                                return '#f0ab00'; // yellow
-                              } else {
-                                return '#c9190b'; // red
-                              }
-                            };
-
-                            return (
-                              <div style={{ height: '200px', width: '100%' }}>
-                                <Chart
-                                  domain={{ y: [0, maxCount] }}
-                                  domainPadding={{ x: [10, 10] }}
-                                  height={200}
-                                  padding={{ bottom: 50, left: 50, right: 20, top: 20 }}
-                                  themeColor={ChartThemeColor.multi}
-                                  width={undefined}
+                        <table
+                          style={{
+                            width: '100%',
+                            borderCollapse: 'collapse',
+                          }}
+                        >
+                          <thead>
+                            <tr
+                              style={{
+                                borderBottom: '2px solid var(--pf-global--BorderColor--100)',
+                                textAlign: 'left',
+                              }}
+                            >
+                              <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Percentile</th>
+                              <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Node</th>
+                              <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Value</th>
+                              <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>%</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {stats.percentiles.p100 && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
                                 >
-                                  <ChartAxis 
-                                    dependentAxis
-                                    showGrid
-                                    tickValues={yTickValues}
-                                    tickFormat={(t) => Math.round(t)}
-                                  />
-                                  <ChartAxis 
-                                    tickFormat={(t) => {
-                                      // Extract the upper bound from range format "0-10" -> "10"
-                                      const match = String(t).match(/(\d+)-(\d+)/);
-                                      if (match) {
-                                        return match[2]; // Return upper bound
-                                      }
-                                      return t;
-                                    }}
-                                  />
-                                  <ChartBar
-                                    data={chartData}
-                                    style={{
-                                      data: {
-                                        fill: ({ datum }) => getBarColor(datum.x, datum.y)
-                                      }
-                                    }}
-                                  />
-                                </Chart>
-                                <div style={{
+                                  P100 (Max)
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p100.nodeName}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {resourceName === 'cpu'
+                                    ? stats.percentiles.p100.used.toFixed(1)
+                                    : resourceName === 'memory'
+                                    ? formatMemory(stats.percentiles.p100.used).value +
+                                      formatMemory(stats.percentiles.p100.used).unit
+                                    : stats.percentiles.p100.used.toFixed(1)}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p100.percentage.toFixed(1)}%
+                                </td>
+                              </tr>
+                            )}
+                            {stats.percentiles.p99 && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  P99
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p99.nodeName}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {resourceName === 'cpu'
+                                    ? stats.percentiles.p99.used.toFixed(1)
+                                    : resourceName === 'memory'
+                                    ? formatMemory(stats.percentiles.p99.used).value +
+                                      formatMemory(stats.percentiles.p99.used).unit
+                                    : stats.percentiles.p99.used.toFixed(1)}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p99.percentage.toFixed(1)}%
+                                </td>
+                              </tr>
+                            )}
+                            {stats.percentiles.p90 && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  P90
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p90.nodeName}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {resourceName === 'cpu'
+                                    ? stats.percentiles.p90.used.toFixed(1)
+                                    : resourceName === 'memory'
+                                    ? formatMemory(stats.percentiles.p90.used).value +
+                                      formatMemory(stats.percentiles.p90.used).unit
+                                    : stats.percentiles.p90.used.toFixed(1)}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p90.percentage.toFixed(1)}%
+                                </td>
+                              </tr>
+                            )}
+                            {stats.percentiles.p50 && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  P50 (Median)
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p50.nodeName}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {resourceName === 'cpu'
+                                    ? stats.percentiles.p50.used.toFixed(1)
+                                    : resourceName === 'memory'
+                                    ? formatMemory(stats.percentiles.p50.used).value +
+                                      formatMemory(stats.percentiles.p50.used).unit
+                                    : stats.percentiles.p50.used.toFixed(1)}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p50.percentage.toFixed(1)}%
+                                </td>
+                              </tr>
+                            )}
+                            {stats.percentiles.p10 && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  P10
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p10.nodeName}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {resourceName === 'cpu'
+                                    ? stats.percentiles.p10.used.toFixed(1)
+                                    : resourceName === 'memory'
+                                    ? formatMemory(stats.percentiles.p10.used).value +
+                                      formatMemory(stats.percentiles.p10.used).unit
+                                    : stats.percentiles.p10.used.toFixed(1)}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p10.percentage.toFixed(1)}%
+                                </td>
+                              </tr>
+                            )}
+                            {stats.percentiles.p0 && (
+                              <tr>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  P0 (Min)
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p0.nodeName}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {resourceName === 'cpu'
+                                    ? stats.percentiles.p0.used.toFixed(1)
+                                    : resourceName === 'memory'
+                                    ? formatMemory(stats.percentiles.p0.used).value +
+                                      formatMemory(stats.percentiles.p0.used).unit
+                                    : stats.percentiles.p0.used.toFixed(1)}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                                  }}
+                                >
+                                  {stats.percentiles.p0.percentage.toFixed(1)}%
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Distribution Bar Chart */}
+                      <div style={{ minWidth: '280px', flex: '1 1 280px', paddingLeft: '1rem' }}>
+                        <div style={{ marginBottom: '2.5rem', fontWeight: 'bold' }}>
+                          Node Resource Distribution:
+                        </div>
+                        {(() => {
+                          const maxCount = Math.max(...Object.values(stats.distribution), 1);
+
+                          // Convert distribution data to PatternFly chart format
+                          const chartData = Object.entries(stats.distribution).map(
+                            ([range, count]) => ({
+                              x: range,
+                              y: count,
+                            }),
+                          );
+
+                          // Calculate unique y-axis tick values
+                          const numTicks = Math.min(maxCount + 1, 6); // Max 6 ticks
+                          const tickStep = maxCount / (numTicks - 1);
+                          const yTickValues: number[] = [];
+                          for (let i = 0; i < numTicks; i++) {
+                            const tickValue = Math.round(i * tickStep);
+                            // Only add if it's unique
+                            if (
+                              yTickValues.length === 0 ||
+                              tickValue !== yTickValues[yTickValues.length - 1]
+                            ) {
+                              yTickValues.push(tickValue);
+                            }
+                          }
+
+                          // Determine color based on percentage range
+                          const getBarColor = (rangeStr: string, count: number) => {
+                            if (count === 0) return 'var(--pf-global--BorderColor--100)';
+
+                            // Extract the upper bound of the range (e.g., "80-90" -> 90)
+                            const match = rangeStr.match(/(\d+)-(\d+)/);
+                            if (!match) return '#3e8635'; // default to green
+
+                            const upperBound = parseInt(match[2], 10);
+
+                            // Green for 0-50%, Yellow for 50-80%, Red for 80-100%
+                            if (upperBound <= 50) {
+                              return '#3e8635'; // green
+                            } else if (upperBound <= 80) {
+                              return '#f0ab00'; // yellow
+                            } else {
+                              return '#c9190b'; // red
+                            }
+                          };
+
+                          return (
+                            <div style={{ height: '200px', width: '100%' }}>
+                              <Chart
+                                domain={{ y: [0, maxCount] }}
+                                domainPadding={{ x: [10, 10] }}
+                                height={200}
+                                padding={{ bottom: 50, left: 50, right: 20, top: 20 }}
+                                themeColor={ChartThemeColor.multi}
+                                width={undefined}
+                              >
+                                <ChartAxis
+                                  dependentAxis
+                                  showGrid
+                                  tickValues={yTickValues}
+                                  tickFormat={(t) => Math.round(t)}
+                                />
+                                <ChartAxis
+                                  tickFormat={(t) => {
+                                    // Extract the upper bound from range format "0-10" -> "10"
+                                    const match = String(t).match(/(\d+)-(\d+)/);
+                                    if (match) {
+                                      return match[2]; // Return upper bound
+                                    }
+                                    return t;
+                                  }}
+                                />
+                                <ChartBar
+                                  data={chartData}
+                                  style={{
+                                    data: {
+                                      fill: ({ datum }) => getBarColor(datum.x, datum.y),
+                                    },
+                                  }}
+                                />
+                              </Chart>
+                              <div
+                                style={{
                                   textAlign: 'center',
                                   marginTop: '0.5rem',
-                                  color: 'var(--pf-global--Color--200)'
-                                }}>
-                                  % of Allocatable Resource Requested
-                                </div>
+                                  color: 'var(--pf-global--Color--200)',
+                                }}
+                              >
+                                % of Allocatable Resource Requested
                               </div>
-                            );
-                          })()}
-                        </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
-                  </CardBody>
-                </Card>
-              );
-            })}
-          </div>
+                  </div>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
 
-          {/* Right Column - Scheduling Pressure */}
-          <Card style={{ height: 'fit-content', maxHeight: '100%', overflow: 'visible' }}>
-            <div style={{
+        {/* Right Column - Scheduling Pressure */}
+        <Card style={{ height: 'fit-content', maxHeight: '100%', overflow: 'visible' }}>
+          <div
+            style={{
               fontWeight: 'bold',
               padding: '1rem 1rem 0.5rem 1rem',
               borderBottom: '1px solid var(--pf-global--BorderColor--100)',
-              textAlign: 'left'
-            }}>
-              Scheduling Pressure
+              textAlign: 'left',
+            }}
+          >
+            Scheduling Pressure
+          </div>
+          <CardBody
+            style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}
+          >
+            <div style={{ marginBottom: '0.5rem' }}>
+              Unscheduled Pods: <strong>{clusterStats.unscheduledPods}</strong>
             </div>
-            <CardBody style={{ padding: '0.5rem 1rem 1rem 1rem', margin: '0', boxSizing: 'border-box' }}>
-              <div style={{ marginBottom: '0.5rem' }}>
-                Unscheduled Pods: <strong>{clusterStats.unscheduledPods}</strong>
-              </div>
-              <div style={{ marginTop: '0.5rem' }}>
-                <SchedulingPressure pods={pods} showNames={showPodNames} />
-              </div>
+            <div style={{ marginTop: '0.5rem' }}>
+              <SchedulingPressure pods={pods} showNames={showPodNames} />
+            </div>
 
-              {/* Scheduling Failures Table */}
-              {schedulingFailures.length > 0 && (
-                <div style={{ marginTop: '1.5rem' }}>
-                  <div style={{
+            {/* Scheduling Failures Table */}
+            {schedulingFailures.length > 0 && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <div
+                  style={{
                     fontWeight: 'bold',
                     marginBottom: '0.5rem',
                     paddingBottom: '0.5rem',
-                    borderBottom: '1px solid var(--pf-global--BorderColor--100)'
-                  }}>
-                    Scheduling Failures
-                  </div>
-                  <table style={{
-                    width: '100%',
-                    borderCollapse: 'collapse'
-                  }}>
-                    <thead>
-                      <tr style={{
-                        borderBottom: '2px solid var(--pf-global--BorderColor--100)',
-                        textAlign: 'left'
-                      }}>
-                        <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Error</th>
-                        <th style={{ padding: '0.5rem', fontWeight: 'bold', textAlign: 'right' }}>Count</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {schedulingFailures.map(([reason, count], idx) => (
-                        <tr
-                          key={reason}
-                          style={{
-                            borderBottom: idx < schedulingFailures.length - 1 ? '1px solid var(--pf-global--BorderColor--100)' : 'none'
-                          }}
-                        >
-                          <td style={{ padding: '0.5rem', wordBreak: 'break-word' }}>{reason}</td>
-                          <td style={{ padding: '0.5rem', textAlign: 'right' }}><strong>{count}</strong></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    borderBottom: '1px solid var(--pf-global--BorderColor--100)',
+                  }}
+                >
+                  Scheduling Failures
                 </div>
-              )}
-            </CardBody>
-          </Card>
-        </div>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        borderBottom: '2px solid var(--pf-global--BorderColor--100)',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <th style={{ padding: '0.5rem', fontWeight: 'bold' }}>Error</th>
+                      <th style={{ padding: '0.5rem', fontWeight: 'bold', textAlign: 'right' }}>
+                        Count
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schedulingFailures.map(([reason, count], idx) => (
+                      <tr
+                        key={reason}
+                        style={{
+                          borderBottom:
+                            idx < schedulingFailures.length - 1
+                              ? '1px solid var(--pf-global--BorderColor--100)'
+                              : 'none',
+                        }}
+                      >
+                        <td style={{ padding: '0.5rem', wordBreak: 'break-word' }}>{reason}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                          <strong>{count}</strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 };

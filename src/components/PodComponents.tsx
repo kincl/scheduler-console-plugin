@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Popover } from '@patternfly/react-core';
 import { PodType } from './types';
-import { calculatePodEffectiveCPU, calculatePodEffectiveMemory, calculatePodEffectiveResource, formatMemory, getSchedulingFailureReason } from './utils';
+import {
+  calculatePodEffectiveCPU,
+  calculatePodEffectiveMemory,
+  calculatePodEffectiveResource,
+  formatMemory,
+  getSchedulingFailureReason,
+} from './utils';
 
 // Pod Box Component - small box representing a pod
 export const PodBox: React.FC<{
@@ -38,7 +44,7 @@ export const PodBox: React.FC<{
     if (onHover && selectedResources) {
       // Calculate all resources that are currently selected
       const resources: { [key: string]: number } = {};
-      selectedResources.forEach(resourceName => {
+      selectedResources.forEach((resourceName) => {
         if (resourceName === 'cpu') {
           resources[resourceName] = effectiveCPU;
         } else if (resourceName === 'memory') {
@@ -84,7 +90,7 @@ export const PodBox: React.FC<{
               fontWeight: 'bold',
               color: '#ffffff',
               flexShrink: 0,
-              marginTop: '2px'
+              marginTop: '2px',
             }}
           >
             P
@@ -93,7 +99,7 @@ export const PodBox: React.FC<{
             to={getPodDetailUrl(pod)}
             style={{
               textDecoration: 'underline',
-              wordBreak: 'break-word'
+              wordBreak: 'break-word',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -115,7 +121,9 @@ export const PodBox: React.FC<{
       </div>
       <div style={{ display: 'flex' }}>
         <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Memory:</span>
-        <span>{memoryFormatted.value} {memoryFormatted.unit}</span>
+        <span>
+          {memoryFormatted.value} {memoryFormatted.unit}
+        </span>
       </div>
     </div>
   );
@@ -147,20 +155,22 @@ export const PodBox: React.FC<{
           justifyContent: showName ? 'center' : undefined,
           padding: showName ? '0.25rem' : undefined,
           boxSizing: 'border-box',
-          overflow: 'hidden'
+          overflow: 'hidden',
         }}
       >
         {showName && (
-          <span style={{
-            color: '#ffffff',
-            textAlign: 'center',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%',
-            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-            pointerEvents: 'none'
-          }}>
+          <span
+            style={{
+              color: '#ffffff',
+              textAlign: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              width: '100%',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+              pointerEvents: 'none',
+            }}
+          >
             {pod.metadata.name}
           </span>
         )}
@@ -183,15 +193,15 @@ export const PodsDisplay: React.FC<{
   }
 
   // Calculate effective CPU and memory for each pod
-  const podsWithResources = pods.map(pod => ({
+  const podsWithResources = pods.map((pod) => ({
     pod,
     effectiveCPU: calculatePodEffectiveCPU(pod),
-    effectiveMemory: calculatePodEffectiveMemory(pod)
+    effectiveMemory: calculatePodEffectiveMemory(pod),
   }));
 
   // Find max values to normalize
-  const maxEffectiveCPU = Math.max(...podsWithResources.map(p => p.effectiveCPU), 1);
-  const maxEffectiveMemory = Math.max(...podsWithResources.map(p => p.effectiveMemory), 1);
+  const maxEffectiveCPU = Math.max(...podsWithResources.map((p) => p.effectiveCPU), 1);
+  const maxEffectiveMemory = Math.max(...podsWithResources.map((p) => p.effectiveMemory), 1);
 
   // Calculate combined resource score (normalized average of CPU and memory)
   const podsWithScore = podsWithResources.map(({ pod, effectiveCPU, effectiveMemory }) => {
@@ -213,22 +223,28 @@ export const PodsDisplay: React.FC<{
   const maxWidth = showNames ? 240 : 120;
 
   return (
-    <div style={{
-      marginTop: '0.75rem',
-      paddingTop: '0.75rem',
-      borderTop: '1px solid #D1D1D1'
-    }}>
-      <div style={{
-        marginBottom: '0.5rem',
-        color: '#6A6E73'
-      }}>
+    <div
+      style={{
+        marginTop: '0.75rem',
+        paddingTop: '0.75rem',
+        borderTop: '1px solid #D1D1D1',
+      }}
+    >
+      <div
+        style={{
+          marginBottom: '0.5rem',
+          color: '#6A6E73',
+        }}
+      >
         {title} ({pods.length})
       </div>
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '0.25rem'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.25rem',
+        }}
+      >
         {podsWithScore.map(({ pod, combinedScore, effectiveCPU, effectiveMemory }) => {
           // Pods with no resource allocation are half size
           if (effectiveCPU === 0 && effectiveMemory === 0) {
@@ -266,7 +282,11 @@ export const PodsDisplay: React.FC<{
 };
 
 // Unschedulable Pod Box Component - small box representing an unschedulable pod
-export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({ pod, width, showName }) => {
+export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showName: boolean }> = ({
+  pod,
+  width,
+  showName,
+}) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
   const effectiveCPU = calculatePodEffectiveCPU(pod);
@@ -301,7 +321,7 @@ export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showNa
               fontWeight: 'bold',
               color: '#ffffff',
               flexShrink: 0,
-              marginTop: '2px'
+              marginTop: '2px',
             }}
           >
             P
@@ -310,7 +330,7 @@ export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showNa
             to={getPodDetailUrl(pod)}
             style={{
               textDecoration: 'underline',
-              wordBreak: 'break-word'
+              wordBreak: 'break-word',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -336,7 +356,9 @@ export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showNa
       </div>
       <div style={{ display: 'flex' }}>
         <span style={{ fontWeight: 'bold', minWidth: '80px' }}>Memory:</span>
-        <span>{memoryFormatted.value} {memoryFormatted.unit}</span>
+        <span>
+          {memoryFormatted.value} {memoryFormatted.unit}
+        </span>
       </div>
     </div>
   );
@@ -366,20 +388,22 @@ export const UnschedulablePodBox: React.FC<{ pod: PodType; width: number; showNa
           justifyContent: showName ? 'center' : undefined,
           padding: showName ? '0.25rem' : undefined,
           boxSizing: 'border-box',
-          overflow: 'hidden'
+          overflow: 'hidden',
         }}
       >
         {showName && (
-          <span style={{
-            color: '#ffffff',
-            textAlign: 'center',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%',
-            textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-            pointerEvents: 'none'
-          }}>
+          <span
+            style={{
+              color: '#ffffff',
+              textAlign: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              width: '100%',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+              pointerEvents: 'none',
+            }}
+          >
             {pod.metadata.name}
           </span>
         )}

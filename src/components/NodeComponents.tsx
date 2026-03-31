@@ -12,18 +12,16 @@ export const NodeRoles: React.FC<{ node: NodeType }> = ({ node }) => {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      marginLeft: '0.5rem'
-    }}>
-      {roles.map(role => (
-        <Label
-          key={role}
-          color="blue"
-          style={{}}
-        >
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginLeft: '0.5rem',
+      }}
+    >
+      {roles.map((role) => (
+        <Label key={role} color="blue" style={{}}>
           {role}
         </Label>
       ))}
@@ -36,8 +34,8 @@ export const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
   const conditions = node.status?.conditions || [];
 
   // Filter for conditions we want to display
-  const displayConditions = conditions.filter(condition =>
-    ['Ready', 'MemoryPressure', 'DiskPressure', 'PIDPressure'].includes(condition.type)
+  const displayConditions = conditions.filter((condition) =>
+    ['Ready', 'MemoryPressure', 'DiskPressure', 'PIDPressure'].includes(condition.type),
   );
 
   if (displayConditions.length === 0) {
@@ -55,10 +53,10 @@ export const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
 
   const getConditionLabel = (type: string) => {
     const labels: { [key: string]: string } = {
-      'Ready': 'Ready',
-      'MemoryPressure': 'Mem',
-      'DiskPressure': 'Disk',
-      'PIDPressure': 'PID'
+      Ready: 'Ready',
+      MemoryPressure: 'Mem',
+      DiskPressure: 'Disk',
+      PIDPressure: 'PID',
     };
     return labels[type] || type;
   };
@@ -71,13 +69,15 @@ export const NodeConditions: React.FC<{ node: NodeType }> = ({ node }) => {
   });
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      marginLeft: 'auto'
-    }}>
-      {sortedConditions.map(condition => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginLeft: 'auto',
+      }}
+    >
+      {sortedConditions.map((condition) => (
         <Label
           key={condition.type}
           color={getConditionColor(condition.type, condition.status)}

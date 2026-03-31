@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { Card, CardTitle, CardBody } from '@patternfly/react-core';
 import { NodeType, PodType } from './types';
-import { parseCPUQuantity, parseMemoryQuantity, parseGenericResource, formatGenericResource } from './utils';
+import {
+  parseCPUQuantity,
+  parseMemoryQuantity,
+  parseGenericResource,
+  formatGenericResource,
+} from './utils';
 import { EffectiveCPUBar, EffectiveMemoryBar, GenericResourceBar } from './ResourceBar';
 import { NodeRoles, NodeConditions } from './NodeComponents';
 import { PodsDisplay } from './PodComponents';
@@ -14,9 +19,24 @@ export const NodeCard: React.FC<{
   limitedMemory: number;
   pods: PodType[];
   selectedResources: Set<string>;
-  resourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } };
+  resourceUsage: {
+    [resourceName: string]: {
+      requests: { [nodeName: string]: number };
+      limits: { [nodeName: string]: number };
+    };
+  };
   showPodNames: boolean;
-}> = ({ node, requestedCPUs, limitedCPUs, requestedMemory, limitedMemory, pods, selectedResources, resourceUsage, showPodNames }) => {
+}> = ({
+  node,
+  requestedCPUs,
+  limitedCPUs,
+  requestedMemory,
+  limitedMemory,
+  pods,
+  selectedResources,
+  resourceUsage,
+  showPodNames,
+}) => {
   const [hoveredPodResources, setHoveredPodResources] = useState<{ [key: string]: number }>({});
 
   const totalCPUs = parseCPUQuantity(node.status?.capacity?.cpu || '0');
@@ -31,12 +51,12 @@ export const NodeCard: React.FC<{
   };
 
   // Separate pods into regular and system pods
-  const regularPods = pods.filter(pod => {
+  const regularPods = pods.filter((pod) => {
     const namespace = pod.metadata.namespace;
     return !namespace.startsWith('kube-') && !namespace.startsWith('openshift-');
   });
 
-  const systemPods = pods.filter(pod => {
+  const systemPods = pods.filter((pod) => {
     const namespace = pod.metadata.namespace;
     return namespace.startsWith('kube-') || namespace.startsWith('openshift-');
   });
@@ -48,7 +68,7 @@ export const NodeCard: React.FC<{
         width: '100%',
         margin: '0 0 1rem 0',
         padding: 0,
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
       }}
     >
       <CardTitle
@@ -58,13 +78,11 @@ export const NodeCard: React.FC<{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #D1D1D1'
+          borderBottom: '1px solid #D1D1D1',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span>
-            {node.metadata.name}
-          </span>
+          <span>{node.metadata.name}</span>
           <NodeRoles node={node} />
         </div>
         <NodeConditions node={node} />
@@ -76,7 +94,7 @@ export const NodeCard: React.FC<{
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.5rem'
+          gap: '0.5rem',
         }}
       >
         {selectedResources.has('cpu') && (
@@ -98,8 +116,8 @@ export const NodeCard: React.FC<{
           />
         )}
         {Array.from(selectedResources)
-          .filter(resource => resource !== 'cpu' && resource !== 'memory')
-          .map(resource => {
+          .filter((resource) => resource !== 'cpu' && resource !== 'memory')
+          .map((resource) => {
             const capacity = node.status?.capacity?.[resource];
             if (!capacity) return null;
 
@@ -123,17 +141,17 @@ export const NodeCard: React.FC<{
               />
             );
           })}
-        <PodsDisplay 
-          pods={regularPods} 
-          showNames={showPodNames} 
+        <PodsDisplay
+          pods={regularPods}
+          showNames={showPodNames}
           title="Pods"
           onPodHover={handlePodHover}
           onPodHoverEnd={handlePodHoverEnd}
           selectedResources={selectedResources}
         />
-        <PodsDisplay 
-          pods={systemPods} 
-          showNames={showPodNames} 
+        <PodsDisplay
+          pods={systemPods}
+          showNames={showPodNames}
           title="System Pods"
           onPodHover={handlePodHover}
           onPodHoverEnd={handlePodHoverEnd}

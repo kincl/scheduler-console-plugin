@@ -1,16 +1,15 @@
 import React, { useMemo, Suspense, useState, useEffect } from 'react';
-import {
-  Title,
-  Spinner,
-  Label,
-  Checkbox,
-  Tabs,
-  Tab,
-  TabTitleText,
-} from '@patternfly/react-core';
+import { Title, Spinner, Label, Checkbox, Tabs, Tab, TabTitleText } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { NodeType, PodType, NamespaceType } from './types';
-import { isValidNode, isValidPod, getNodeRoles, parseCPUQuantity, parseMemoryQuantity, parseGenericResource } from './utils';
+import {
+  isValidNode,
+  isValidPod,
+  getNodeRoles,
+  parseCPUQuantity,
+  parseMemoryQuantity,
+  parseGenericResource,
+} from './utils';
 import { SchedulingEvents } from './SchedulingComponents';
 import { ResourceSelector, ProjectSelector } from './SelectorComponents';
 import { NodeCard } from './NodeCard';
@@ -42,7 +41,7 @@ const SchedulerPage: React.FC = () => {
 
   // Default to showing CPU and Memory
   const [selectedResources, setSelectedResources] = useState<Set<string>>(
-    new Set(['cpu', 'memory'])
+    new Set(['cpu', 'memory']),
   );
 
   // Default to showing all namespaces
@@ -64,7 +63,7 @@ const SchedulerPage: React.FC = () => {
     if (!nodes || !Array.isArray(nodes)) return [];
     return nodes.filter(isValidNode).map((node, index) => ({
       ...node,
-      _key: `node-${node.metadata.uid}-${index}`
+      _key: `node-${node.metadata.uid}-${index}`,
     }));
   }, [nodes]);
 
@@ -73,9 +72,9 @@ const SchedulerPage: React.FC = () => {
     const resources = new Set<string>();
     if (!nodes || !Array.isArray(nodes)) return Array.from(resources);
 
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (node.status?.capacity) {
-        Object.keys(node.status.capacity).forEach(resource => {
+        Object.keys(node.status.capacity).forEach((resource) => {
           resources.add(resource);
         });
       }
@@ -94,7 +93,7 @@ const SchedulerPage: React.FC = () => {
   }, [nodes]);
 
   const handleResourceToggle = (resource: string) => {
-    setSelectedResources(prev => {
+    setSelectedResources((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(resource)) {
         newSet.delete(resource);
@@ -108,13 +107,11 @@ const SchedulerPage: React.FC = () => {
   // Get list of available namespaces
   const availableNamespaces = useMemo(() => {
     if (!namespaces || !Array.isArray(namespaces)) return [];
-    return namespaces
-      .map(ns => ns.metadata.name)
-      .sort((a, b) => a.localeCompare(b));
+    return namespaces.map((ns) => ns.metadata.name).sort((a, b) => a.localeCompare(b));
   }, [namespaces]);
 
   const handleNamespaceToggle = (namespace: string) => {
-    setSelectedNamespaces(prev => {
+    setSelectedNamespaces((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(namespace)) {
         newSet.delete(namespace);
@@ -139,28 +136,32 @@ const SchedulerPage: React.FC = () => {
     // If no namespaces selected, show all pods
     if (selectedNamespaces.size === 0) return pods;
     // Otherwise, filter by selected namespaces
-    return pods.filter(pod => selectedNamespaces.has(pod.metadata.namespace));
+    return pods.filter((pod) => selectedNamespaces.has(pod.metadata.namespace));
   }, [pods, selectedNamespaces]);
-
 
   // Calculate resource requests and limits per node for all resources
   const nodeResourceUsage = useMemo(() => {
     // Structure: { resourceName: { requests: { nodeName: value }, limits: { nodeName: value } } }
-    const resourceUsage: { [resourceName: string]: { requests: { [nodeName: string]: number }, limits: { [nodeName: string]: number } } } = {};
+    const resourceUsage: {
+      [resourceName: string]: {
+        requests: { [nodeName: string]: number };
+        limits: { [nodeName: string]: number };
+      };
+    } = {};
 
     if (!filteredPods || !Array.isArray(filteredPods)) {
       return resourceUsage;
     }
 
-    filteredPods.filter(isValidPod).forEach(pod => {
+    filteredPods.filter(isValidPod).forEach((pod) => {
       const nodeName = pod.spec.nodeName;
       if (!nodeName) return;
 
       // Process all resources from all containers in the pod
-      pod.spec.containers.forEach(container => {
+      pod.spec.containers.forEach((container) => {
         // Process requests
         if (container.resources?.requests) {
-          Object.keys(container.resources.requests).forEach(resourceName => {
+          Object.keys(container.resources.requests).forEach((resourceName) => {
             const resourceValue = container.resources.requests![resourceName];
             if (!resourceValue) return;
 
@@ -187,7 +188,7 @@ const SchedulerPage: React.FC = () => {
 
         // Process limits
         if (container.resources?.limits) {
-          Object.keys(container.resources.limits).forEach(resourceName => {
+          Object.keys(container.resources.limits).forEach((resourceName) => {
             const resourceValue = container.resources.limits![resourceName];
             if (!resourceValue) return;
 
@@ -223,7 +224,7 @@ const SchedulerPage: React.FC = () => {
 
     if (!filteredPods || !Array.isArray(filteredPods)) return grouped;
 
-    filteredPods.filter(isValidPod).forEach(pod => {
+    filteredPods.filter(isValidPod).forEach((pod) => {
       const nodeName = pod.spec.nodeName;
       if (!nodeName) return;
 
@@ -239,7 +240,7 @@ const SchedulerPage: React.FC = () => {
   // Filter nodes to only show those with workloads if hideEmptyNodes is enabled
   const displayNodes = useMemo(() => {
     if (!hideEmptyNodes) return validNodes;
-    return validNodes.filter(node => {
+    return validNodes.filter((node) => {
       const nodePods = podsByNode[node.metadata.name];
       return nodePods && nodePods.length > 0;
     });
@@ -247,16 +248,18 @@ const SchedulerPage: React.FC = () => {
 
   // Group nodes by their roles for compact view
   const nodesByRole = useMemo(() => {
-    const groups: { [roleKey: string]: { roles: string[], nodes: (NodeType & { _key?: string })[] } } = {};
+    const groups: {
+      [roleKey: string]: { roles: string[]; nodes: (NodeType & { _key?: string })[] };
+    } = {};
 
-    displayNodes.forEach(node => {
+    displayNodes.forEach((node) => {
       const roles = getNodeRoles(node);
       const roleKey = roles.length > 0 ? roles.sort().join(',') : 'no-role';
 
       if (!groups[roleKey]) {
         groups[roleKey] = {
           roles: roles.length > 0 ? roles : [],
-          nodes: []
+          nodes: [],
         };
       }
       groups[roleKey].nodes.push(node);
@@ -268,8 +271,8 @@ const SchedulerPage: React.FC = () => {
       const rolesB = groupB.roles;
 
       // Check if either group contains 'master' or 'control-plane'
-      const aIsMaster = rolesA.some(r => r === 'master' || r === 'control-plane');
-      const bIsMaster = rolesB.some(r => r === 'master' || r === 'control-plane');
+      const aIsMaster = rolesA.some((r) => r === 'master' || r === 'control-plane');
+      const bIsMaster = rolesB.some((r) => r === 'master' || r === 'control-plane');
 
       if (aIsMaster && !bIsMaster) return -1;
       if (!aIsMaster && bIsMaster) return 1;
@@ -294,31 +297,38 @@ const SchedulerPage: React.FC = () => {
   }
 
   return (
-    <div style={{
-      width: '100%',
-      height: 'calc(100vh - 64px)',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden'
-    }}>
-      <div style={{
+    <div
+      style={{
         width: '100%',
-        padding: '1rem',
-        boxSizing: 'border-box',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
+        height: 'calc(100vh - 64px)',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        flexWrap: 'wrap'
-      }}>
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          padding: '1rem',
+          boxSizing: 'border-box',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          flexWrap: 'wrap',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Title headingLevel="h1" style={{
-            margin: 0,
-            flex: '0 0 auto'
-          }}>
+          <Title
+            headingLevel="h1"
+            style={{
+              margin: 0,
+              flex: '0 0 auto',
+            }}
+          >
             Cluster Scheduler Overview
           </Title>
           <Label color="orange" style={{ color: 'white' }}>
@@ -344,29 +354,28 @@ const SchedulerPage: React.FC = () => {
           )}
         </div>
       </div>
-      <div style={{
-        flexGrow: 1,
-        width: '100%',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        paddingRight: '1rem',
-        paddingLeft: '1rem',
-        paddingBottom: '1rem',
-        boxSizing: 'border-box'
-      }}>
+      <div
+        style={{
+          flexGrow: 1,
+          width: '100%',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          paddingRight: '1rem',
+          paddingLeft: '1rem',
+          paddingBottom: '1rem',
+          boxSizing: 'border-box',
+        }}
+      >
         <Suspense fallback={<Spinner />}>
           {!nodesLoaded ? (
             <Spinner />
           ) : (
-            <Tabs
-              activeKey={activeTab}
-              onSelect={(_, tabIndex) => setActiveTab(tabIndex)}
-            >
+            <Tabs activeKey={activeTab} onSelect={(_, tabIndex) => setActiveTab(tabIndex)}>
               <Tab eventKey={0} title={<TabTitleText>Overview</TabTitleText>}>
                 <div style={{ paddingTop: '1rem' }}>
-                  <ClusterOverview 
-                    nodes={validNodes} 
-                    pods={filteredPods || []} 
+                  <ClusterOverview
+                    nodes={validNodes}
+                    pods={filteredPods || []}
                     nodeResourceUsage={nodeResourceUsage}
                     showPodNames={showPodNames}
                     selectedResources={selectedResources}
@@ -376,10 +385,10 @@ const SchedulerPage: React.FC = () => {
               <Tab eventKey={1} title={<TabTitleText>Nodes</TabTitleText>}>
                 <div style={{ paddingTop: '1rem' }}>
                   {nodesLoaded && (
-                    <div 
-                      style={{ 
-                        display: 'flex', 
-                        gap: '1rem', 
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '1rem',
                         marginBottom: '1rem',
                         flexWrap: 'wrap',
                         alignItems: 'center',
@@ -395,8 +404,9 @@ const SchedulerPage: React.FC = () => {
                         marginLeft: '-1rem',
                         marginRight: '-1rem',
                         paddingLeft: '1rem',
-                        paddingRight: '1rem'
-                      }}>
+                        paddingRight: '1rem',
+                      }}
+                    >
                       <Checkbox
                         id="hide-empty-nodes"
                         label="Only show nodes with workloads"
@@ -422,18 +432,22 @@ const SchedulerPage: React.FC = () => {
                       {nodesByRole.map(([roleKey, group]) => (
                         <div key={roleKey} style={{ marginBottom: '2rem', width: '100%' }}>
                           {/* Role header */}
-                          <div style={{
-                            marginBottom: '1rem',
-                            paddingBottom: '0.5rem',
-                            borderBottom: '2px solid #D1D1D1',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                          }}>
+                          <div
+                            style={{
+                              marginBottom: '1rem',
+                              paddingBottom: '0.5rem',
+                              borderBottom: '2px solid #D1D1D1',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                            }}
+                          >
                             {group.roles.length > 0 ? (
                               <>
                                 <span>
-                                  {group.roles.map(role => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
+                                  {group.roles
+                                    .map((role) => role.charAt(0).toUpperCase() + role.slice(1))
+                                    .join(', ')}
                                 </span>
                                 <span style={{ color: '#6A6E73', fontWeight: 'normal' }}>
                                   ({group.nodes.length} node{group.nodes.length !== 1 ? 's' : ''})
@@ -449,13 +463,15 @@ const SchedulerPage: React.FC = () => {
                             )}
                           </div>
                           {/* Nodes grid */}
-                          <div style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '1rem',
-                            justifyContent: 'flex-start',
-                            alignItems: 'flex-start'
-                          }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '1rem',
+                              justifyContent: 'flex-start',
+                              alignItems: 'flex-start',
+                            }}
+                          >
                             {group.nodes.map((node) => {
                               const cpuData = nodeResourceUsage['cpu'];
                               const memoryData = nodeResourceUsage['memory'];

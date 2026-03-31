@@ -12,7 +12,8 @@ export const EffectiveCPUBar: React.FC<{
   // Effective CPU is the maximum of requests and limits
   const effectiveCPUs = Math.max(requestedCPUs, limitedCPUs);
   const percentageUsed = totalCPUs > 0 ? Math.min((effectiveCPUs / totalCPUs) * 100, 100) : 0;
-  const hoveredPercentage = hoveredPodCPU && totalCPUs > 0 ? Math.min((hoveredPodCPU / totalCPUs) * 100, 100) : 0;
+  const hoveredPercentage =
+    hoveredPodCPU && totalCPUs > 0 ? Math.min((hoveredPodCPU / totalCPUs) * 100, 100) : 0;
 
   // Color based on utilization
   const getBarColor = () => {
@@ -23,32 +24,37 @@ export const EffectiveCPUBar: React.FC<{
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '0.25rem'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '0.25rem',
+        }}
+      >
         <span>Effective CPU</span>
         <span style={{ color: '#6A6E73' }}>
           {effectiveCPUs.toFixed(2)} / {totalCPUs.toFixed(2)} cores
         </span>
       </div>
-      <div style={{
-        width: '100%',
-        height: '12px',
-        backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
-        borderRadius: '2px',
-        overflow: 'hidden',
-        position: 'relative',
-        border: '1px solid var(--pf-global--BorderColor--100)'
-      }}>
+      <div
+        style={{
+          width: '100%',
+          height: '12px',
+          backgroundColor:
+            'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
+          borderRadius: '2px',
+          overflow: 'hidden',
+          position: 'relative',
+          border: '1px solid var(--pf-global--BorderColor--100)',
+        }}
+      >
         <div
           style={{
             width: `${percentageUsed}%`,
             height: '100%',
             backgroundColor: getBarColor(),
-            transition: 'width 0.3s ease, background-color 0.3s ease'
+            transition: 'width 0.3s ease, background-color 0.3s ease',
           }}
           title={`${nodeName}: ${effectiveCPUs.toFixed(2)} of ${totalCPUs.toFixed(2)} CPUs`}
         />
@@ -65,9 +71,11 @@ export const EffectiveCPUBar: React.FC<{
               border: '2px solid #06C',
               boxSizing: 'border-box',
               pointerEvents: 'none',
-              transition: 'width 0.2s ease'
+              transition: 'width 0.2s ease',
             }}
-            title={`Hovered pod: ${hoveredPodCPU.toFixed(2)} cores (${hoveredPercentage.toFixed(1)}%)`}
+            title={`Hovered pod: ${hoveredPodCPU.toFixed(2)} cores (${hoveredPercentage.toFixed(
+              1,
+            )}%)`}
           />
         )}
       </div>
@@ -86,8 +94,9 @@ export const EffectiveMemoryBar: React.FC<{
   // Effective Memory is the maximum of requests and limits
   const effectiveMemory = Math.max(requestedMemory, limitedMemory);
   const percentageUsed = totalMemory > 0 ? Math.min((effectiveMemory / totalMemory) * 100, 100) : 0;
-  const hoveredPercentage = hoveredPodMemory && totalMemory > 0 ? Math.min((hoveredPodMemory / totalMemory) * 100, 100) : 0;
-  
+  const hoveredPercentage =
+    hoveredPodMemory && totalMemory > 0 ? Math.min((hoveredPodMemory / totalMemory) * 100, 100) : 0;
+
   const usedFormatted = formatMemory(effectiveMemory);
   const totalFormatted = formatMemory(totalMemory);
   const hoveredFormatted = hoveredPodMemory ? formatMemory(hoveredPodMemory) : null;
@@ -101,32 +110,37 @@ export const EffectiveMemoryBar: React.FC<{
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '0.25rem'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '0.25rem',
+        }}
+      >
         <span>Effective Memory</span>
         <span style={{ color: '#6A6E73' }}>
           {usedFormatted.value} {usedFormatted.unit} / {totalFormatted.value} {totalFormatted.unit}
         </span>
       </div>
-      <div style={{
-        width: '100%',
-        height: '12px',
-        backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
-        borderRadius: '2px',
-        overflow: 'hidden',
-        position: 'relative',
-        border: '1px solid var(--pf-global--BorderColor--100)'
-      }}>
+      <div
+        style={{
+          width: '100%',
+          height: '12px',
+          backgroundColor:
+            'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
+          borderRadius: '2px',
+          overflow: 'hidden',
+          position: 'relative',
+          border: '1px solid var(--pf-global--BorderColor--100)',
+        }}
+      >
         <div
           style={{
             width: `${percentageUsed}%`,
             height: '100%',
             backgroundColor: getBarColor(),
-            transition: 'width 0.3s ease, background-color 0.3s ease'
+            transition: 'width 0.3s ease, background-color 0.3s ease',
           }}
           title={`${nodeName}: ${usedFormatted.value} ${usedFormatted.unit} of ${totalFormatted.value} ${totalFormatted.unit}`}
         />
@@ -143,9 +157,11 @@ export const EffectiveMemoryBar: React.FC<{
               border: '2px solid #8B5CF6',
               boxSizing: 'border-box',
               pointerEvents: 'none',
-              transition: 'width 0.2s ease'
+              transition: 'width 0.2s ease',
             }}
-            title={`Hovered pod: ${hoveredFormatted.value} ${hoveredFormatted.unit} (${hoveredPercentage.toFixed(1)}%)`}
+            title={`Hovered pod: ${hoveredFormatted.value} ${
+              hoveredFormatted.unit
+            } (${hoveredPercentage.toFixed(1)}%)`}
           />
         )}
       </div>
@@ -163,7 +179,8 @@ export const GenericResourceBar: React.FC<{
   hoveredValue?: number;
 }> = ({ total, used, nodeName, label, formatValue, hoveredValue }) => {
   const percentageUsed = total > 0 ? Math.min((used / total) * 100, 100) : 0;
-  const hoveredPercentage = hoveredValue && total > 0 ? Math.min((hoveredValue / total) * 100, 100) : 0;
+  const hoveredPercentage =
+    hoveredValue && total > 0 ? Math.min((hoveredValue / total) * 100, 100) : 0;
 
   // Color based on utilization
   const getBarColor = () => {
@@ -174,34 +191,41 @@ export const GenericResourceBar: React.FC<{
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '0.25rem'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '0.25rem',
+        }}
+      >
         <span>{label}</span>
         <span style={{ color: '#6A6E73' }}>
           {formatValue(used)} / {formatValue(total)}
         </span>
       </div>
-      <div style={{
-        width: '100%',
-        height: '12px',
-        backgroundColor: 'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
-        borderRadius: '2px',
-        overflow: 'hidden',
-        position: 'relative',
-        border: '1px solid var(--pf-global--BorderColor--100)'
-      }}>
+      <div
+        style={{
+          width: '100%',
+          height: '12px',
+          backgroundColor:
+            'var(--pf-v5-global--palette--black-400, var(--pf-global--palette--black-400, #d2d2d2))',
+          borderRadius: '2px',
+          overflow: 'hidden',
+          position: 'relative',
+          border: '1px solid var(--pf-global--BorderColor--100)',
+        }}
+      >
         <div
           style={{
             width: `${percentageUsed}%`,
             height: '100%',
             backgroundColor: getBarColor(),
-            transition: 'width 0.3s ease, background-color 0.3s ease'
+            transition: 'width 0.3s ease, background-color 0.3s ease',
           }}
-          title={`${nodeName}: ${formatValue(used)} of ${formatValue(total)} ${label.toLowerCase()}`}
+          title={`${nodeName}: ${formatValue(used)} of ${formatValue(
+            total,
+          )} ${label.toLowerCase()}`}
         />
         {/* Overlay for hovered pod */}
         {hoveredValue && hoveredValue > 0 && (
@@ -216,7 +240,7 @@ export const GenericResourceBar: React.FC<{
               border: '2px solid #EC644B',
               boxSizing: 'border-box',
               pointerEvents: 'none',
-              transition: 'width 0.2s ease'
+              transition: 'width 0.2s ease',
             }}
             title={`Hovered pod: ${formatValue(hoveredValue)} (${hoveredPercentage.toFixed(1)}%)`}
           />
